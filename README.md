@@ -12,6 +12,7 @@ gurl 是使用curl过程中的痛点的改进。gurl实现了本人经常使用�
 ```
 env GOPATH=`pwd` go get {github.com/NaihongGuo/flag,github.com/ghodss/yaml,github.com/robfig/cron}
 env GOPATH=`pwd` go get github.com/satori/go.uuid
+env GOPATH=`pwd` go build gurl.go
 ```
 #### examples
 * 命令行
