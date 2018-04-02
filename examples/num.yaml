@@ -1,0 +1,19 @@
+root:
+  no_send: yes
+  H:
+  - appkey:haha
+  set:
+  - $add = $num(1+2)
+  - $sub = $num(1-2)
+  - $mul = $num(1*2)
+  - $div = $num(1/2)
+  - $tst_url = http://127.0.0.1:14986
+
+child:
+- H: 
+  F:
+  - text="tst"
+  url: $tst_url
+  if:
+    cond: "yes"
+    format: "add=$add,,sub=$sub, mul=$mul, div=$div"

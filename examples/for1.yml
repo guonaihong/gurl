@@ -1,0 +1,28 @@
+---
+root:
+  no_send: yes
+  H:
+  - appkey:haha
+  url: http://127.0.0.1:14988/n2t/cn
+  set:
+  - $chinese_text[...]=-1
+  - $chinese_text[...]=-2
+  - $chinese_text[...]=-319
+  - $chinese_text[...]=18:00
+  - $chinese_text[...]=202
+  - $chinese_text[...]=11:01
+  - $chinese_text[...]=11:00
+  - $chinese_text[...]=11:00:00
+  - $chinese_text[...]=11:30
+
+child:
+- for:
+    range: $chinese_text
+    k: $i
+
+    H:
+    - "$root_header"
+    - session-id:$uuid()
+    F:
+    - text=$chinese_text[$i]
+    url: "$root_url"

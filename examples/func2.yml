@@ -1,0 +1,34 @@
+root:
+  no_send: yes
+  H:
+  - appkey:haha
+  set:
+  - $chinese_asr_url = http://127.0.0.1:24986/asr/pcm
+  - $file_list = $shell_exec_str(ls) 
+  - $file_pcms = $string_fields($file_list)
+  - $tst_url = http://127.0.0.1:14986
+
+func:
+- name: run_asr_slice
+  args:
+  - $file_name
+  - $buffer_size
+  - $sleep_time
+
+  set:
+  - $sessionid = $uuid()
+
+  F:
+  - text=tst
+  url: $tst_url
+  if:
+    cond: "yes"
+    format: "file_name:$file_name, buffer_size:$buffer_size, sleep_time:$sleep_time"
+
+child:
+- for:
+    range: $file_pcms
+    k: $i
+    set:
+    - $run_asr_slice($file_pcms[$i], $num(1024 * 4), $num(32000/(1024 * 4)))
+

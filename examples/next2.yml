@@ -1,0 +1,63 @@
+---
+root:
+  no_send: yes
+  H:
+  - appkey:haha
+  set:
+  - $chinese_eval_url = http://127.0.0.1:14986/eval/pcm
+  - $chinese_n2t_url = http://127.0.0.1:14988/n2t/cn
+  - $chinese_text = 你好，中国
+
+child:
+- no_send: no
+  H:
+  - "$root_header"
+  - session-id:$uuid()
+  F:
+  - mode=b
+  - text=$chinese_text
+  - voice=@./nihao-zhongguo.pcm
+  url: "$chinese_eval_url"
+  o:
+   /dev/null
+  if:
+    cond: "yes"
+    format: $format_json($http_body)
+
+  next:
+  - no_send: no
+    H:
+    - "$root_header"
+    - session-id:$uuid()
+    F:
+    - mode=e
+    - text=$parent_http_body
+    url: "$chinese_n2t_url"
+    o:
+      2.json
+      #/dev/null
+    if:
+      cond: "yes"
+      format: $format_json($http_body)
+
+    next:
+    - no_send: no
+      H:
+      - "$root_header"
+      - session-id:$uuid()
+      F:
+      - mode=e
+      - text=$chinese_text
+      - voice=@./nihao-zhongguo.pcm
+      url: "$chinese_eval_url"
+      o:
+        1.json
+
+      if:
+        cond: $string_eq($parent_http_body, $http_body)
+        format: test ok
+      else:
+        format: $format_json($http_body)
+        set:
+        -  $shell_exec(diff, -u, 1.json, 2.json)
+        -  $shell_exec(rm, ./1.json, ./2.json)

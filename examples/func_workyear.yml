@@ -1,0 +1,39 @@
+root:
+  no_send: yes
+  H:
+  - appkey:haha
+  set:
+  - $tst_url = http://127.0.0.1:14986
+  - $year_day[365] = ""
+  - $year[...] = 一
+  - $year[...] = 二
+  - $year[...] = 三
+  - $year[...] = 四
+
+func:
+- name: uns_work4year
+  args:
+  - $cur_year
+
+  for:
+    range: $year_day
+    k: $j
+
+    H:
+    - ""
+    url:
+      $tst_url
+
+    if:
+      cond: "yes"
+      format: "在uns工作的第$cur_year年的$j天"
+
+
+child:
+- no_send: yes
+  for:
+    range: $year
+    k: $i
+    v: $cur_year
+    set:
+    - $uns_work4year($cur_year)

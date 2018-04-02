@@ -1,0 +1,22 @@
+root:
+  no_send: yes
+  H:
+  - appkey:haha
+  set:
+  - $my_name=NaihongGuo
+  - $hobby = write code
+  - $str[...] = ${my_name} is 28 years old this year
+  - $str[...] = Like $hobby
+  - $tst_url = http://127.0.0.1:14986
+
+child:
+- for:
+    range: $str
+    v: $val
+    H: 
+    F:
+    - text="tst"
+    url: $tst_url
+    if:
+      cond: "yes"
+      format: "$val"
