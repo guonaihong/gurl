@@ -49,7 +49,8 @@ type Response struct {
 
 func MultiGurlInit(m *MultiGurl) {
 
-	m.Cmd.Base.MemInit()
+	//TODO
+	//m.Cmd.Base.MemInit()
 	m.Root.Base.MemInit()
 
 	rootMap := core.SaveVar{}
@@ -280,7 +281,9 @@ func BaseSend(b *core.Base, client *http.Client, c *conf.Conf, valMap core.SaveV
 		}
 	}
 
-	if len(b.FormCache) > 0 {
+	if len(b.Body) > 0 {
+		rsp = b.BodyRequest(client)
+	} else if len(b.FormCache) > 0 {
 		rsp = b.Multipart(client)
 	} else {
 		rsp = b.NotMultipart(client)

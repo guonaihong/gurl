@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -36,6 +37,7 @@ type Base struct {
 	Set     []string `json:"set"`
 	Method  string   `json:"method"`
 
+	J   []string `json:"J"`
 	F   []string `json:"F"`
 	H   []string // http header
 	Url string   `json:"url"`
@@ -52,12 +54,33 @@ type Base struct {
 
 	FormCache map[string]FormVal
 
+	Body string
 	Cond
 }
 
 func (b *Base) MemInit() {
 
 	var fileds [2]string
+
+	if len(b.J) > 0 {
+		bodyJson := map[string]interface{}{}
+
+		for _, v := range b.J {
+			vv := strings.Split(v, "=")
+			if len(vv) != 2 {
+				continue
+			}
+
+			bodyJson[vv[0]] = vv[1]
+		}
+
+		body, err := json.Marshal(&bodyJson)
+		if err != nil {
+			log.Fatalf("marsahl fail:%s\n", err)
+		}
+
+		b.Body = string(body)
+	}
 
 	b.FormCache = make(map[string]FormVal, 10)
 	for i, v := range b.RunF {
@@ -212,6 +235,30 @@ func (b *Base) WriteFile(rsp *http.Response, body []byte) {
 	}
 
 	io.Copy(fd, rsp.Body)
+}
+
+func (b *Base) BodyRequest(client *http.Client) (rsp *http.Response) {
+
+	var (
+		err error
+		req *http.Request
+	)
+
+	req, err = http.NewRequest(b.Method, b.RunUrl, strings.NewReader(b.Body))
+	if err != nil {
+		return
+	}
+
+	b.HeadersAdd(req)
+
+	c := client
+
+	rsp, err = c.Do(req)
+	if err != nil {
+		return
+	}
+
+	return rsp
 }
 
 func (b *Base) NotMultipart(client *http.Client) (rsp *http.Response) {

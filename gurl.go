@@ -17,6 +17,7 @@ func main() {
 	output := flag.String("o", "", "Write to FILE instead of stdout")
 	method := flag.String("X", "", "Specify request command to use")
 	genName := flag.String("gen", "", "Generate the default yml configuration file(The optional value is for, if)")
+	toJson := flag.StringSlice("J", []string{}, `Turn key=value into {"key": "value"})`)
 
 	flag.Parse()
 
@@ -43,6 +44,7 @@ func main() {
 				F:      *forms,
 				H:      *headers,
 				O:      *output,
+				J:      *toJson,
 				Url:    Url,
 			},
 		},
