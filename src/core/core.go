@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -58,6 +59,37 @@ type Base struct {
 	Cond
 }
 
+func parseVal(bodyJson map[string]interface{}, key, val string) {
+	if val == "{}" {
+		bodyJson[key] = map[string]interface{}{}
+		return
+	}
+
+	f, err := strconv.ParseFloat(val, 0)
+	if err == nil {
+		bodyJson[key] = f
+		return
+	}
+
+	i, err := strconv.ParseInt(val, 0, 0)
+	if err == nil {
+		bodyJson[key] = i
+		return
+	}
+
+	b, err := strconv.ParseBool(val)
+	if err == nil {
+		bodyJson[key] = b
+		return
+	}
+
+	bodyJson[key] = val
+}
+
+func parseVal2(bodyJson map[string]interface{}, key, val string) {
+	bodyJson[key] = val
+}
+
 func (b *Base) MemInit() {
 
 	var fileds [2]string
@@ -66,12 +98,56 @@ func (b *Base) MemInit() {
 		bodyJson := map[string]interface{}{}
 
 		for _, v := range b.J {
-			vv := strings.Split(v, "=")
-			if len(vv) != 2 {
+			pos := strings.Index(v, "=")
+			if pos == -1 {
 				continue
 			}
 
-			bodyJson[vv[0]] = vv[1]
+			key := v[:pos]
+			val := v[pos+1:]
+
+			if pos := strings.Index(key, "."); pos != -1 {
+				keys := strings.Split(key, ".")
+
+				parseValCb := parseVal2
+				if pos := strings.Index(key, ":"); pos != -1 {
+					key = key[:len(key)-1]
+					parseValCb = parseVal
+				}
+
+				type jsonObj map[string]interface{}
+
+				curMap := bodyJson
+
+				for i, v := range keys {
+					if len(keys)-1 == i {
+						parseValCb(curMap, v, val)
+						break
+					}
+
+					vv, ok := curMap[v]
+					if !ok {
+						vv = jsonObj{}
+						curMap[v] = vv
+					}
+
+					curMap = vv.(jsonObj)
+
+				}
+				continue
+			}
+
+			if key[len(key)-1] != ':' {
+				bodyJson[key] = val
+				continue
+			}
+
+			if len(key) == 1 {
+				continue
+			}
+
+			parseVal(bodyJson, key, val)
+
 		}
 
 		body, err := json.Marshal(&bodyJson)

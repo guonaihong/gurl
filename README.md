@@ -25,15 +25,44 @@ env GOPATH=`pwd` go build gurl.go
   ```
   * 发送json格式数据到服务端
   ```
-  ./gurl -J username=admin -J passwd=123456 http://127.0.0.1:1234
-  # {"passwd":"123456","username":"admin"}
+  ./gurl -J username=admin -J passwd=123456 -J bool_val:=true  -J int_val:=3 -J float_val:=0.3 http://127.0.0.1:12345
+  {
+    "bool_val": true,
+    "float_val": 0.3,
+    "int_val": 3,
+    "passwd": "123456",
+    "username": "admin"
+  }
+
+  ```
+  * 发送多层json格式数据到服务端
+  ```
+  ./gurl -J a.b.c.d:=true -J a.b.c.e:=111 http://127.0.0.1:12345
+  {
+    "a": {
+      "b": {
+        "c": {
+          "d:": true,
+          "e:": 111
+        }
+      }
+    }
+  }
+
   ```
   * 指定多个http header
   ```
   ./gurl -H "header1:value1" -H "header2:value2" http://xxx.xxx.xxx.xxx:port
   ```
+  * 定时发送(每隔一秒从服务里取结果)
+  ```
+  ./gurl -cron "@every 1s" -H "session-id:f0c371f1-f418-477c-92d4-129c16c8e4d5" http://127.0.0.1:12345/asr/result
+  ```
 * 配置文件  
  请见examples目录
+  ```
+  * ./gurl -K ./demo.yml
+  ```
 
 #### TODO
 * bugfix
