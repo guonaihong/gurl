@@ -2,11 +2,14 @@ package main
 
 import (
 	"core"
+	_ "fmt"
 	"gen"
 	"github.com/NaihongGuo/flag"
 	"github.com/robfig/cron"
 	"gurl"
 	"strings"
+	"sync"
+	_ "unsafe"
 )
 
 func modifyUrl(u string) string {
@@ -37,6 +40,8 @@ func main() {
 	genName := flag.String("gen", "", "Generate the default yml configuration file(The optional value is for, if)")
 	toJson := flag.StringSlice("J", []string{}, `Turn key=value into {"key": "value"})`)
 	url := flag.String("url", "", "Specify a URL to fetch")
+	an := flag.Int("an", 1, "Number of requests to perform")
+	ac := flag.Int("ac", 1, "Number of multiple requests to make")
 
 	flag.Parse()
 
@@ -92,6 +97,30 @@ func main() {
 		cron.Run()
 	}
 
-	gurl.MultiGurlInit(&multiGurl)
-	multiGurl.Send()
+	work := make(chan struct{}, 1000)
+	wg := sync.WaitGroup{}
+
+	go func() {
+
+		for i, n := 0, *an; i < n; i++ {
+			work <- struct{}{}
+		}
+
+		close(work)
+	}()
+
+	//fmt.Printf("-->%d\n", unsafe.Sizeof(multiGurl))
+	for i, c := 0, *ac; i < c; i++ {
+		wg.Add(1)
+		m := multiGurl
+		go func(m *gurl.MultiGurl) {
+			defer wg.Done()
+			for range work {
+				gurl.MultiGurlInit(m)
+				m.Send()
+			}
+		}(&m)
+	}
+
+	wg.Wait()
 }

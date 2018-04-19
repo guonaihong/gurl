@@ -31,9 +31,9 @@ type MultiGurl struct {
 
 	Cmd Gurl `json:"cmd"`
 
-	*conf.Conf
-
 	ConfFile
+
+	*conf.Conf
 }
 
 type ConfFile struct {
