@@ -9,6 +9,7 @@ gurl 是使用curl过程中的痛点的改进。gurl实现了本人经常使用�
 * 支持httpie一部功能
 * 定时运行gurl(支持cron表达式)
 * 支持结构化配置文件(里面有if, else, for, func)
+* url 支持简写
 
 #### build
 ```
@@ -35,6 +36,17 @@ env GOPATH=`pwd` go build gurl.go
   }
 
   ```
+  * 如果key=value的数据是从文件或者终端里面读取，可以使用下面的方面转成json格式发给服务端
+  ```
+  echo "username=admin passwd=123456 bool_val:=true int_val:=3 float_val:=0.3"|xargs -d' ' -I {} echo -J {}|xargs ./gurl -url :12345
+  {
+    "bool_val": true,
+    "float_val": 0.3,
+    "int_val": 3,
+    "passwd": "123456",
+    "username": "admin"
+  }
+  ```
   * 发送多层json格式数据到服务端
   ```
   ./gurl -J a.b.c.d:=true -J a.b.c.e:=111 http://127.0.0.1:12345
@@ -58,6 +70,10 @@ env GOPATH=`pwd` go build gurl.go
   ```
   ./gurl -cron "@every 1s" -H "session-id:f0c371f1-f418-477c-92d4-129c16c8e4d5" http://127.0.0.1:12345/asr/result
   ```
+  * url支持简写种类
+    * -url http://127.0.0.1:1234 --> 127.0.0.1:1234
+    * -url http://127.0.0.1:1234 --> :1234
+    * -url http://127.0.0.1/path --> /path
 * 配置文件  
  请见examples目录
   ```
