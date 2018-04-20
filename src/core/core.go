@@ -98,7 +98,7 @@ func (b *Base) MemInit() {
 		bodyJson := map[string]interface{}{}
 
 		for _, v := range b.J {
-			pos := strings.Index(v, "=")
+			pos := strings.Index(v, ":")
 			if pos == -1 {
 				continue
 			}
@@ -110,8 +110,8 @@ func (b *Base) MemInit() {
 				keys := strings.Split(key, ".")
 
 				parseValCb := parseVal2
-				if pos := strings.Index(key, ":"); pos != -1 {
-					key = key[:len(key)-1]
+				if strings.HasPrefix(val, "=") {
+					val = val[1:]
 					parseValCb = parseVal
 				}
 
@@ -137,7 +137,7 @@ func (b *Base) MemInit() {
 				continue
 			}
 
-			if key[len(key)-1] != ':' {
+			if val[0] != '=' {
 				bodyJson[key] = val
 				continue
 			}
@@ -146,6 +146,7 @@ func (b *Base) MemInit() {
 				continue
 			}
 
+			val = val[1:]
 			parseVal(bodyJson, key, val)
 
 		}
