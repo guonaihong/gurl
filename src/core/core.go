@@ -28,6 +28,7 @@ type Cond struct {
 type SaveVar map[string]interface{}
 
 type FormVal struct {
+	Tag   string
 	Fname string
 	Body  []byte
 }
@@ -53,7 +54,7 @@ type Base struct {
 	Parent  *Base   `json:"-"`
 	NextMap SaveVar `json:"-"`
 
-	FormCache map[string]FormVal
+	FormCache []FormVal
 
 	Body string
 	Cond
@@ -90,77 +91,70 @@ func parseVal2(bodyJson map[string]interface{}, key, val string) {
 	bodyJson[key] = val
 }
 
-func (b *Base) MemInit() {
-
-	var fileds [2]string
-
-	if len(b.J) > 0 {
-		bodyJson := map[string]interface{}{}
-
-		for _, v := range b.J {
-			pos := strings.Index(v, ":")
-			if pos == -1 {
-				continue
-			}
-
-			key := v[:pos]
-			val := v[pos+1:]
-
-			if pos := strings.Index(key, "."); pos != -1 {
-				keys := strings.Split(key, ".")
-
-				parseValCb := parseVal2
-				if strings.HasPrefix(val, "=") {
-					val = val[1:]
-					parseValCb = parseVal
-				}
-
-				type jsonObj map[string]interface{}
-
-				curMap := bodyJson
-
-				for i, v := range keys {
-					if len(keys)-1 == i {
-						parseValCb(curMap, v, val)
-						break
-					}
-
-					vv, ok := curMap[v]
-					if !ok {
-						vv = jsonObj{}
-						curMap[v] = vv
-					}
-
-					curMap = vv.(jsonObj)
-
-				}
-				continue
-			}
-
-			if val[0] != '=' {
-				bodyJson[key] = val
-				continue
-			}
-
-			if len(key) == 1 {
-				continue
-			}
-
-			val = val[1:]
-			parseVal(bodyJson, key, val)
-
+func toJson(J []string, bodyJson map[string]interface{}) {
+	for _, v := range J {
+		pos := strings.Index(v, ":")
+		if pos == -1 {
+			continue
 		}
 
-		body, err := json.Marshal(&bodyJson)
-		if err != nil {
-			log.Fatalf("marsahl fail:%s\n", err)
+		key := v[:pos]
+		val := v[pos+1:]
+
+		if pos := strings.Index(key, "."); pos != -1 {
+			keys := strings.Split(key, ".")
+
+			parseValCb := parseVal2
+			if strings.HasPrefix(val, "=") {
+				val = val[1:]
+				parseValCb = parseVal
+			}
+
+			type jsonObj map[string]interface{}
+
+			curMap := bodyJson
+
+			for i, v := range keys {
+				if len(keys)-1 == i {
+					parseValCb(curMap, v, val)
+					break
+				}
+
+				vv, ok := curMap[v]
+				if !ok {
+					vv = jsonObj{}
+					curMap[v] = vv
+				}
+
+				curMap = vv.(jsonObj)
+
+			}
+			continue
 		}
 
-		b.Body = string(body)
+		if val[0] != '=' {
+			bodyJson[key] = val
+			continue
+		}
+
+		if len(key) == 1 {
+			continue
+		}
+
+		val = val[1:]
+		parseVal(bodyJson, key, val)
+
 	}
+}
 
-	b.FormCache = make(map[string]FormVal, 10)
-	for i, v := range b.RunF {
+func form(F []string, fm *[]FormVal) {
+
+	var (
+		fileds   [2]string
+		formVals []FormVal
+	)
+
+	for _, v := range F {
 		fileds[0] = ""
 		fileds[1] = ""
 
@@ -187,14 +181,35 @@ func (b *Base) MemInit() {
 				log.Fatalf("read body fail:%v\n", err2)
 			}
 
-			b.FormCache[fileds[0]] = FormVal{Fname: fname, Body: body}
+			formVals = append(formVals, FormVal{Tag: fileds[0], Fname: fname, Body: body})
 
 			fd.Close()
 		} else {
-			b.FormCache[fileds[0]] = FormVal{Body: []byte(fileds[1])}
+			formVals = append(formVals, FormVal{Tag: fileds[0], Body: []byte(fileds[1])})
 		}
 
-		b.RunF[i] = fileds[0]
+		//RunF[i] = fileds[0]
+	}
+}
+
+func (b *Base) MemInit() {
+
+	if len(b.J) > 0 {
+		bodyJson := map[string]interface{}{}
+
+		toJson(b.J, bodyJson)
+
+		body, err := json.Marshal(&bodyJson)
+		if err != nil {
+			log.Fatalf("marsahl fail:%s\n", err)
+			return
+		}
+
+		b.Body = string(body)
+	}
+
+	if len(b.F) > 0 {
+		form(b.F, &b.FormCache)
 	}
 }
 
@@ -238,23 +253,19 @@ func (b *Base) MultipartNew() (*http.Request, chan error, error) {
 
 		var part io.Writer
 
-		for _, fv := range b.RunF {
+		for _, fv := range b.FormCache {
 
-			v, ok := b.FormCache[fv]
-			if !ok {
-				continue
-			}
-			k := fv
+			k := fv.Tag
 
-			fname := v.Fname
+			fname := fv.Fname
 
 			if len(fname) == 0 {
 				part, err = writer.CreateFormField(k)
-				part.Write([]byte(v.Body))
+				part.Write([]byte(fv.Body))
 				continue
 			}
 
-			body := bytes.NewBuffer(v.Body)
+			body := bytes.NewBuffer(fv.Body)
 
 			part, err = writer.CreateFormFile(k, filepath.Base(fname))
 			if err != nil {

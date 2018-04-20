@@ -38,7 +38,7 @@ func main() {
 	output := flag.String("o", "", "Write to FILE instead of stdout")
 	method := flag.String("X", "", "Specify request command to use")
 	genName := flag.String("gen", "", "Generate the default yml configuration file(The optional value is for, if)")
-	toJson := flag.StringSlice("J", []string{}, `Turn key=value into {"key": "value"})`)
+	toJson := flag.StringSlice("J", []string{}, `Turn key:value into {"key": "value"})`)
 	url := flag.String("url", "", "Specify a URL to fetch")
 	an := flag.Int("an", 1, "Number of requests to perform")
 	ac := flag.Int("ac", 1, "Number of multiple requests to make")
