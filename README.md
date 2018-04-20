@@ -36,9 +36,9 @@ env GOPATH=`pwd` go build gurl.go
   }
 
   ```
-  * 如果key=value的数据是从文件或者终端里面读取，可以使用下面的方面转成json格式发给服务端
+  * 如果key:value的数据是从文件或者终端里面读取，可以使用下面的方面转成json格式发给服务端
   ```
-  echo "username=admin passwd=123456 bool_val:=true int_val:=3 float_val:=0.3"|xargs -d' ' -I {} echo -J {}|xargs ./gurl -url :12345
+  echo "username:admin passwd:123456 bool_val:=true int_val:=3 float_val:=0.3"|xargs -d' ' -I {} echo -J {}|xargs ./gurl -url :12345
   {
     "bool_val": true,
     "float_val": 0.3,
@@ -62,7 +62,7 @@ env GOPATH=`pwd` go build gurl.go
   }
 
   ```
-  * multipart字段中有json数据格式
+  * 向multipart字段中插入json数据
   ```
   ./gurl -Jfa text=DisplayText:good -Jfa text=Language:cn -Jfa text2=look:me -F text=good :12345
 
