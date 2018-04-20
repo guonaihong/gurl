@@ -199,6 +199,7 @@ func BaseParse(g *core.Base, c *conf.Conf, rangeMap core.SaveVar) {
 	}
 
 	g.RunF = append([]string{}, g.F...)
+	g.RunJfa = append([]string{}, g.Jfa...)
 	g.RunUrl = g.Url
 	g.RunH = g.H
 	g.RunO = g.O

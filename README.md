@@ -38,7 +38,7 @@ env GOPATH=`pwd` go build gurl.go
   ```
   * 如果key=value的数据是从文件或者终端里面读取，可以使用下面的方面转成json格式发给服务端
   ```
-  echo "username:admin passwd:123456 bool_val:=true int_val:=3 float_val:=0.3"|xargs -d' ' -I {} echo -J {}|xargs ./gurl -url :12345
+  echo "username=admin passwd=123456 bool_val:=true int_val:=3 float_val:=0.3"|xargs -d' ' -I {} echo -J {}|xargs ./gurl -url :12345
   {
     "bool_val": true,
     "float_val": 0.3,
@@ -61,6 +61,24 @@ env GOPATH=`pwd` go build gurl.go
     }
   }
 
+  ```
+  * multipart字段中有json数据格式
+  ```
+  ./gurl -Jfa text=DisplayText:good -Jfa text=Language:cn -Jfa text2=look:me -F text=good :12345
+
+  --4361c4e6ae1b083e9e0508a7b40eb215bccd265c4bed00137cc7d112e890
+  Content-Disposition: form-data; name="text"
+
+  {"DisplayText":"good","Language":"cn"}
+  --4361c4e6ae1b083e9e0508a7b40eb215bccd265c4bed00137cc7d112e890
+  Content-Disposition: form-data; name="text2"
+
+  {"look":"me"}
+  --4361c4e6ae1b083e9e0508a7b40eb215bccd265c4bed00137cc7d112e890
+  Content-Disposition: form-data; name="text"
+
+  good
+  --4361c4e6ae1b083e9e0508a7b40eb215bccd265c4bed00137cc7d112e890--
   ```
   * 指定多个http header
   ```

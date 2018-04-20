@@ -45,10 +45,13 @@ type Base struct {
 	Url string   `json:"url"`
 	O   string   `json:"o"`
 
+	Jfa []string `json:"Jfa"`
+
 	RunF   []string `json:"-"`
 	RunH   []string
 	RunUrl string
 	RunO   string
+	RunJfa []string
 
 	Next    []Base  `json:"next"`
 	Parent  *Base   `json:"-"`
@@ -149,22 +152,19 @@ func toJson(J []string, bodyJson map[string]interface{}) {
 
 func form(F []string, fm *[]FormVal) {
 
-	var (
-		fileds   [2]string
-		formVals []FormVal
-	)
+	fileds := [2]string{}
+	formVals := []FormVal{}
 
 	for _, v := range F {
-		fileds[0] = ""
-		fileds[1] = ""
+
+		fileds[0], fileds[1] = "", ""
 
 		pos := strings.Index(v, "=")
 		if pos == -1 {
 			continue
 		}
 
-		fileds[0] = v[:pos]
-		fileds[1] = v[pos+1:]
+		fileds[0], fileds[1] = v[:pos], v[pos+1:]
 
 		//fileds[1] = strings.TrimLeft(fileds[1], " ")
 
@@ -190,6 +190,48 @@ func form(F []string, fm *[]FormVal) {
 
 		//RunF[i] = fileds[0]
 	}
+
+	*fm = append(*fm, formVals...)
+}
+
+func jsonFromAppend(JF []string, fm *[]FormVal) {
+
+	JFMap := map[string][]string{}
+	fileds := [2]string{}
+	formVals := []FormVal{}
+
+	for _, v := range JF {
+
+		fileds[0], fileds[1] = "", ""
+
+		pos := strings.Index(v, "=")
+		if pos == -1 {
+			continue
+		}
+
+		fileds[0], fileds[1] = v[:pos], v[pos+1:]
+
+		v, _ := JFMap[fileds[0]]
+		JFMap[fileds[0]] = append(v, fileds[1])
+	}
+
+	for k, v := range JFMap {
+
+		bodyJson := map[string]interface{}{}
+
+		toJson(v, bodyJson)
+
+		body, err := json.Marshal(&bodyJson)
+
+		if err != nil {
+			log.Fatalf("marsahl fail:%s\n", err)
+			return
+		}
+
+		formVals = append(formVals, FormVal{Tag: k, Body: body})
+	}
+
+	*fm = append(*fm, formVals...)
 }
 
 func (b *Base) MemInit() {
@@ -208,8 +250,14 @@ func (b *Base) MemInit() {
 		b.Body = string(body)
 	}
 
-	if len(b.F) > 0 {
-		form(b.F, &b.FormCache)
+	b.FormCache = []FormVal{}
+
+	if len(b.RunJfa) > 0 {
+		jsonFromAppend(b.RunJfa, &b.FormCache)
+	}
+
+	if len(b.RunF) > 0 {
+		form(b.RunF, &b.FormCache)
 	}
 }
 

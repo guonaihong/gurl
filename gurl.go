@@ -33,6 +33,7 @@ func main() {
 
 	headers := flag.StringSlice("H", []string{}, "Pass custom header LINE to server (H)")
 	forms := flag.StringSlice("F", []string{}, "Specify HTTP multipart POST data (H)")
+	jfa := flag.StringSlice("Jfa", []string{}, "Specify HTTP multipart POST json data (H)")
 	cronExpr := flag.String("cron", "", "Cron expression")
 	conf := flag.String("K", "", "Read config from FILE")
 	output := flag.String("o", "", "Write to FILE instead of stdout")
@@ -71,6 +72,7 @@ func main() {
 				H:      *headers,
 				O:      *output,
 				J:      *toJson,
+				Jfa:    *jfa,
 				Url:    Url,
 			},
 		},
