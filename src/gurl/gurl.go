@@ -1,6 +1,7 @@
 package gurl
 
 import (
+	"bytes"
 	"cond"
 	"conf"
 	"core"
@@ -23,13 +24,11 @@ type Gurl struct {
 
 type GurlCore struct {
 	core.Base
-	For cond.For `json:"for"`
+	For *cond.For `json:"for,omitempty"`
 }
 
 type MultiGurl struct {
 	http.Client `json:"-"`
-
-	Cmd Gurl `json:"cmd"`
 
 	ConfFile
 
@@ -37,6 +36,7 @@ type MultiGurl struct {
 }
 
 type ConfFile struct {
+	Cmd   Gurl   `json:"cmd"`
 	Root  Gurl   `json:"root"`
 	Child []Gurl `json:"child"`
 	Func  []Func `json:"func"`
@@ -81,6 +81,73 @@ func MultiGurlInit(m *MultiGurl) {
 		m.AddFunc(&m.Func[k])
 	}
 
+}
+
+func (m *MultiGurl) GenYaml(opt string) {
+	var (
+		cmd   = 1 << 0
+		root  = 1 << 1
+		child = 1 << 2
+		fn    = 1 << 3
+	)
+
+	opts := strings.Split(opt, ",")
+	out := bytes.Buffer{}
+	//out := os.Stdout
+	mask := 0
+
+	for _, v := range opts {
+		switch v {
+		case "cmd":
+			mask |= cmd
+		case "root":
+			mask |= root
+		case "child":
+			mask |= child
+		case "func":
+			mask |= fn
+		case "all":
+			mask = cmd | root | child | fn
+			goto next
+		}
+	}
+
+next:
+
+	for i := 0; i < 3; i++ {
+		o := (mask & (1 << uint(i))) > 0
+		if !o {
+			continue
+		}
+
+		var v interface{}
+		switch {
+		case i == 0:
+			v = struct {
+				Cmd *Gurl `json:"cmd,omitempty"`
+			}{&m.Cmd}
+		case i == 1:
+			v = struct {
+				Root *Gurl `json:"root,omitempty"`
+			}{&m.Root}
+		case i == 2:
+			v = struct {
+				Child []Gurl `json:"child,omitempty"`
+			}{m.Child}
+		case i == 3:
+			v = struct {
+				Func []Func `json:"func,omitempty"`
+			}{m.Func}
+		}
+
+		j, err := yaml.Marshal(v)
+		out.Write(j)
+		if err != nil {
+			panic(err.Error())
+		}
+	}
+
+	io.Copy(os.Stdout, &out)
 }
 
 func (m *MultiGurl) ChildInitSend(base *core.Base, valMap core.SaveVar) {
@@ -169,7 +236,7 @@ func (m *MultiGurl) Send() {
 
 	for j, _ := range m.Child {
 
-		For := &m.Child[j].For
+		For := m.Child[j].For
 
 		m.RunFor(c, For, core.SaveVar{})
 		m.ChildInitSend(&m.Child[j].Base, nil)
@@ -261,6 +328,19 @@ func (g *Gurl) ConfigInit(config string, cf *ConfFile) error {
 	}
 
 	return nil
+}
+
+//todo reflect copy
+func MergeCmd(cfCmd *Gurl, cmd *Gurl, tactics string) {
+	switch tactics {
+	case "append":
+		if len(cmd.Url) > 0 {
+			cfCmd.Url = cmd.Url
+		}
+	case "set":
+		*cfCmd = *cmd
+
+	}
 }
 
 func BaseSend(b *core.Base, client *http.Client, c *conf.Conf, valMap core.SaveVar) {

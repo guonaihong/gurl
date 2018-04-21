@@ -5,8 +5,8 @@ import (
 )
 
 type For struct {
-	Range string `json:"range"`
-	K     string `json:"k"`
-	V     string `json:"v"`
-	core.Base
+	Range     string `json:"range,omitempty"`
+	K         string `json:"k,omitempty"`
+	V         string `json:"v,omitempty"`
+	core.Base `json:"-"`
 }

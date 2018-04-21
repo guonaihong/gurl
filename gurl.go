@@ -2,8 +2,8 @@ package main
 
 import (
 	"core"
+	"demo"
 	_ "fmt"
-	"gen"
 	"github.com/NaihongGuo/flag"
 	"github.com/robfig/cron"
 	"gurl"
@@ -13,6 +13,9 @@ import (
 )
 
 func modifyUrl(u string) string {
+	if len(u) == 0 {
+		return u
+	}
 
 	if len(u) > 0 && u[0] == ':' {
 		return "http://127.0.0.1" + u
@@ -38,7 +41,8 @@ func main() {
 	conf := flag.String("K", "", "Read config from FILE")
 	output := flag.String("o", "", "Write to FILE instead of stdout")
 	method := flag.String("X", "", "Specify request command to use")
-	genName := flag.String("gen", "", "Generate the default yml configuration file(The optional value is for, if)")
+	demoName := flag.String("demo", "", "Generate the default yml configuration file(The optional value is for, if)")
+	gen := flag.String("gen", "", "Generate the default yml configuration file(The optional value is cmd, root, child, func, all)")
 	toJson := flag.StringSlice("J", []string{}, `Turn key:value into {"key": "value"})`)
 	url := flag.String("url", "", "Specify a URL to fetch")
 	an := flag.Int("an", 1, "Number of requests to perform")
@@ -48,13 +52,13 @@ func main() {
 
 	as := flag.Args()
 	Url := *url
-	if *url == "" && len(as) == 0 && len(*conf) == 0 && len(*genName) == 0 {
+	if *url == "" && len(as) == 0 && len(*conf) == 0 && len(*demoName) == 0 && len(*gen) == 0 {
 		flag.Usage()
 		return
 	}
 
-	if len(*genName) > 0 {
-		gen.Usage(*genName)
+	if len(*demoName) > 0 {
+		demo.Usage(*demoName)
 		return
 	}
 
@@ -78,12 +82,19 @@ func main() {
 		},
 	}
 
-	multiGurl := gurl.MultiGurl{
-		Cmd: c,
-	}
+	multiGurl := gurl.MultiGurl{}
 
 	if len(*conf) > 0 {
 		c.ConfigInit(*conf, &multiGurl.ConfFile)
+		gurl.MergeCmd(&multiGurl.ConfFile.Cmd, &c, "append")
+	} else {
+		gurl.MergeCmd(&multiGurl.ConfFile.Cmd, &c, "set")
+	}
+
+	//fmt.Printf("%v\n", multiGurl.ConfFile)
+	if len(*gen) > 0 {
+		multiGurl.GenYaml(*gen)
+		return
 	}
 
 	if len(*cronExpr) > 0 {

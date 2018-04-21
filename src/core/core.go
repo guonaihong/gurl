@@ -16,14 +16,14 @@ import (
 )
 
 type If struct {
-	Cond   string   `json:"cond"`
-	Format string   `json:"format"`
-	Set    []string `json:"set"`
+	Cond   string   `json:"cond,omitempty"`
+	Format string   `json:"format,omitempty"`
+	Set    []string `json:"set,omitempty"`
 }
 
 type Cond struct {
-	If   If `json:"if"`
-	Else If `json:"else"`
+	If   If `json:"if,omitempty"`
+	Else If `json:"else,omitempty"`
 }
 type SaveVar map[string]interface{}
 
@@ -34,33 +34,33 @@ type FormVal struct {
 }
 
 type Base struct {
-	Include string   `json:"include"`
-	NoSend  bool     `json:"no_send"`
-	Set     []string `json:"set"`
-	Method  string   `json:"method"`
+	Include string   `json:"include,omitempty"`
+	NoSend  bool     `json:"no_send,omitempty"`
+	Set     []string `json:"set,omitempty"`
+	Method  string   `json:"method,omitempty"`
 
-	J   []string `json:"J"`
-	F   []string `json:"F"`
-	H   []string // http header
-	Url string   `json:"url"`
-	O   string   `json:"o"`
+	J   []string `json:"J,omitempty"`
+	F   []string `json:"F,omitempty"`
+	H   []string `json:"H,omitempty"` // http header
+	Url string   `json:"url,omitempty"`
+	O   string   `json:"o,omitempty"`
 
-	Jfa []string `json:"Jfa"`
+	Jfa []string `json:"Jfa,omitempty"`
 
 	RunF   []string `json:"-"`
-	RunH   []string
-	RunUrl string
-	RunO   string
-	RunJfa []string
+	RunH   []string `json:"-"`
+	RunUrl string   `json:"-"`
+	RunO   string   `json:"-"`
+	RunJfa []string `json:"-"`
 
-	Next    []Base  `json:"next"`
+	Next    []Base  `json:"next,omitempty"`
 	Parent  *Base   `json:"-"`
 	NextMap SaveVar `json:"-"`
 
-	FormCache []FormVal
+	FormCache []FormVal `json:"-"`
 
-	Body string
-	Cond
+	Body string `json:"body,omitempty"`
+	Cond `json:"-"`
 }
 
 func parseVal(bodyJson map[string]interface{}, key, val string) {
