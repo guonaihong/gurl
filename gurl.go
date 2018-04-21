@@ -115,8 +115,17 @@ func main() {
 
 	go func() {
 
-		for i, n := 0, *an; i < n; i++ {
-			work <- struct{}{}
+		if *an >= 0 {
+
+			for i, n := 0, *an; i < n; i++ {
+				work <- struct{}{}
+			}
+
+		} else {
+
+			for {
+				work <- struct{}{}
+			}
 		}
 
 		close(work)
