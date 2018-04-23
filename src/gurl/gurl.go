@@ -111,7 +111,7 @@ func (m *MultiGurl) GenCmd() {
 	}
 
 	if len(cmd.Url) > 0 {
-		out.WriteString(" -Url " + cmd.Url)
+		out.WriteString(" -url " + cmd.Url)
 	}
 
 	io.Copy(os.Stdout, &out)

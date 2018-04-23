@@ -106,7 +106,7 @@ env GOPATH=`pwd` go build gurl.go
 
 
  * 配置文件
-   * 从命令行的数据生成配置文件(非常适合命令行调通，把数据结构化保存起来，下次再使用)
+   * 从命令行的数据生成配置文件(选项 -gen cmd)
   ```
   ./gurl -X POST -F mode="A" -F text='good' -F voice=@./good.opus -gen cmd "http://127.0.0.1:24909/eval/opus" &>demo.yaml
   cat demo.yaml 
@@ -121,10 +121,10 @@ env GOPATH=`pwd` go build gurl.go
 
   ./gurl -K ./demo.yml
   ```
-  * 把配置文件转成命令行形式
+  * 把配置文件转成命令行形式(选项-gen tocmd)
   ```
   ./gurl -K demo.yaml  -gen tocmd
-  gurl -X POST -F mode=A -F text=good -F voice=@./good.opus -Url http://127.0.0.1:24909/eval/opus
+  gurl -X POST -F mode=A -F text=good -F voice=@./good.opus -url http://127.0.0.1:24909/eval/opus
   ```
 #### TODO
 * bugfix
