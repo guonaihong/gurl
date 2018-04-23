@@ -17,6 +17,7 @@ gurl 是使用curl过程中的痛点改进。gurl实现了本人经常使用的c
 1. 使用gurl命令行选项调通功能，很多用户经过这一步就完成了任务
 1. 如果命令行里面有难以记忆的部分，并且也需要经常使用它，可使用gurl -gen cmd &>tst.yaml 命令保存到文件里
 2. gurl -K tst.yaml根据配置文件里面的数据访问服务端
+3. 如果要修改tst.yaml，也不熟悉配置文件的写法，可以通过./gurl -K tst.yaml -gen tocmd 命令把tst.yaml的数据转成命令行，然后重复第1步操作
 #### build
 ```
 env GOPATH=`pwd` go get {github.com/NaihongGuo/flag,github.com/ghodss/yaml,github.com/robfig/cron}
@@ -86,6 +87,10 @@ env GOPATH=`pwd` go build gurl.go
   good
   --4361c4e6ae1b083e9e0508a7b40eb215bccd265c4bed00137cc7d112e890--
   ```
+  * 开an个线程, 发送ac个请求
+  ```
+  ./gurl -an 10 -ac 2 -F text=good :1234
+  ```
   * 指定多个http header
   ```
   ./gurl -H "header1:value1" -H "header2:value2" http://xxx.xxx.xxx.xxx:port
@@ -116,7 +121,11 @@ env GOPATH=`pwd` go build gurl.go
 
   ./gurl -K ./demo.yml
   ```
-
+  * 把配置文件转成命令行形式
+  ```
+  ./gurl -K demo.yaml  -gen tocmd
+  gurl -X POST -F mode=A -F text=good -F voice=@./good.opus -Url http://127.0.0.1:24909/eval/opus
+  ```
 #### TODO
 * bugfix
 * 一些用着很顺手的功能添加

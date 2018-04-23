@@ -83,6 +83,40 @@ func MultiGurlInit(m *MultiGurl) {
 
 }
 
+func (m *MultiGurl) GenCmd() {
+	cmd := m.Cmd
+
+	out := bytes.Buffer{}
+
+	out.WriteString("gurl")
+
+	if len(cmd.Method) > 0 {
+		out.WriteString(" -X " + cmd.Method)
+	}
+
+	for _, v := range cmd.H {
+		out.WriteString(" -H " + v)
+	}
+
+	for _, v := range cmd.J {
+		out.WriteString(" -J " + v)
+	}
+
+	for _, v := range cmd.Jfa {
+		out.WriteString(" -Jia " + v)
+	}
+
+	for _, v := range cmd.F {
+		out.WriteString(" -F " + v)
+	}
+
+	if len(cmd.Url) > 0 {
+		out.WriteString(" -Url " + cmd.Url)
+	}
+
+	io.Copy(os.Stdout, &out)
+}
+
 func (m *MultiGurl) GenYaml(opt string) {
 	var (
 		cmd   = 1 << 0
