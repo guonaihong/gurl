@@ -1,4 +1,4 @@
-package gurl
+package gurlib
 
 import (
 	"testing"

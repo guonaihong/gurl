@@ -1,4 +1,4 @@
-package cal
+package gurlib
 
 import (
 	"strings"

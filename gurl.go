@@ -1,12 +1,10 @@
 package main
 
 import (
-	"core"
-	"demo"
 	_ "fmt"
 	"github.com/NaihongGuo/flag"
+	"github.com/guonaihong/gurl/gurlib"
 	"github.com/robfig/cron"
-	"gurl"
 	"strings"
 	"sync"
 	_ "unsafe"
@@ -58,7 +56,7 @@ func main() {
 	}
 
 	if len(*demoName) > 0 {
-		demo.Usage(*demoName)
+		demoUsage(*demoName)
 		return
 	}
 
@@ -68,9 +66,9 @@ func main() {
 
 	Url = modifyUrl(Url)
 
-	c := gurl.Gurl{
-		GurlCore: gurl.GurlCore{
-			Base: core.Base{
+	c := gurlib.Gurl{
+		GurlCore: gurlib.GurlCore{
+			Base: gurlib.Base{
 				Method: *method,
 				F:      *forms,
 				H:      *headers,
@@ -82,13 +80,13 @@ func main() {
 		},
 	}
 
-	multiGurl := gurl.MultiGurl{}
+	multiGurl := gurlib.MultiGurl{}
 
 	if len(*conf) > 0 {
 		c.ConfigInit(*conf, &multiGurl.ConfFile)
-		gurl.MergeCmd(&multiGurl.ConfFile.Cmd, &c, "append")
+		gurlib.MergeCmd(&multiGurl.ConfFile.Cmd, &c, "append")
 	} else {
-		gurl.MergeCmd(&multiGurl.ConfFile.Cmd, &c, "set")
+		gurlib.MergeCmd(&multiGurl.ConfFile.Cmd, &c, "set")
 	}
 
 	//fmt.Printf("%v\n", multiGurl.ConfFile)
@@ -104,7 +102,7 @@ func main() {
 
 		cron.AddFunc(*cronExpr, func() {
 
-			gurl.MultiGurlInit(&multiGurl)
+			gurlib.MultiGurlInit(&multiGurl)
 			multiGurl.Send()
 		})
 		cron.Run()
@@ -135,10 +133,10 @@ func main() {
 	for i, c := 0, *ac; i < c; i++ {
 		wg.Add(1)
 		m := multiGurl
-		go func(m *gurl.MultiGurl) {
+		go func(m *gurlib.MultiGurl) {
 			defer wg.Done()
 			for range work {
-				gurl.MultiGurlInit(m)
+				gurlib.MultiGurlInit(m)
 				m.Send()
 			}
 		}(&m)

@@ -1,8 +1,7 @@
-package conf
+package gurlib
 
 import (
 	"bytes"
-	"cal"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -47,7 +46,7 @@ type FuncVal struct {
 	Parent   map[string]interface{}
 }
 
-func New(rootMap map[string]interface{}) *Conf {
+func ConfNew(rootMap map[string]interface{}) *Conf {
 
 	conf := &Conf{}
 
@@ -162,7 +161,7 @@ func (c *Conf) StringNe(v *FuncVal) error {
 	return nil
 }
 
-func ParseExpr(s string, e *cal.Expr) (rv []string) {
+func ParseExpr(s string, e *Expr) (rv []string) {
 
 	n := 0
 
@@ -187,7 +186,7 @@ func ParseExpr(s string, e *cal.Expr) (rv []string) {
 }
 
 func (c *Conf) Num(v *FuncVal) error {
-	expr := cal.ExprNew()
+	expr := ExprNew()
 
 	eslice := ParseExpr(v.CallArgs[0], expr)
 	expr.Process(eslice)

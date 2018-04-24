@@ -1,10 +1,7 @@
-package gurl
+package gurlib
 
 import (
 	"bytes"
-	"cond"
-	"conf"
-	"core"
 	"fmt"
 	"github.com/NaihongGuo/flag"
 	"github.com/ghodss/yaml"
@@ -23,8 +20,8 @@ type Gurl struct {
 }
 
 type GurlCore struct {
-	core.Base
-	For *cond.For `json:"for,omitempty"`
+	Base
+	For *For `json:"for,omitempty"`
 }
 
 type MultiGurl struct {
@@ -32,7 +29,7 @@ type MultiGurl struct {
 
 	ConfFile
 
-	*conf.Conf
+	*Conf
 }
 
 type ConfFile struct {
@@ -53,7 +50,7 @@ func MultiGurlInit(m *MultiGurl) {
 	//m.Cmd.Base.MemInit()
 	m.Root.Base.MemInit()
 
-	rootMap := core.SaveVar{}
+	rootMap := SaveVar{}
 
 	url := m.Cmd.Url
 	H := m.Cmd.H
@@ -69,7 +66,7 @@ func MultiGurlInit(m *MultiGurl) {
 		rootMap["root_header"] = m.Root.H
 	}
 
-	m.Conf = conf.New(rootMap)
+	m.Conf = ConfNew(rootMap)
 	c := m.Conf
 
 	for _, v := range m.Root.Set {
@@ -150,7 +147,7 @@ next:
 	io.Copy(os.Stdout, &out)
 }
 
-func (m *MultiGurl) ChildInitSend(base *core.Base, valMap core.SaveVar) {
+func (m *MultiGurl) ChildInitSend(base *Base, valMap SaveVar) {
 
 	BaseParse(base, m.Conf, valMap)
 	base.MemInit()
@@ -170,14 +167,14 @@ func (m *MultiGurl) ChildInitSend(base *core.Base, valMap core.SaveVar) {
 }
 
 type Func struct {
-	Name     string
-	Args     []string
-	cond.For `json:"for"`
-	core.Base
+	Name string
+	Args []string
+	For  `json:"for"`
+	Base
 	Root interface{} `json:"-"`
 }
 
-func (f *Func) GurlFunc(v *conf.FuncVal) error {
+func (f *Func) GurlFunc(v *FuncVal) error {
 	if len(f.Args) > len(v.CallArgs) {
 		fmt.Printf("v.CallArgs:%v\n", v.CallArgs)
 		panic("func " + f.Name + " args must is " + strconv.Itoa(len(f.Args)))
@@ -185,7 +182,7 @@ func (f *Func) GurlFunc(v *conf.FuncVal) error {
 
 	m := f.Root.(*MultiGurl)
 	c := m.Conf
-	rangeMap := core.SaveVar{}
+	rangeMap := SaveVar{}
 
 	for k, v := range v.CallArgs {
 		key := c.ParseName([]byte(f.Args[k]))
@@ -202,7 +199,7 @@ func (m *MultiGurl) AddFunc(f *Func) {
 	m.Conf.AddFunc(f.Name, f.GurlFunc)
 }
 
-func (m *MultiGurl) RunFor(c *conf.Conf, For *cond.For, rangeMap core.SaveVar) {
+func (m *MultiGurl) RunFor(c *Conf, For *For, rangeMap SaveVar) {
 	if len(For.Range) > 0 {
 		rangeSlice := c.ParseSlice(
 			[]byte(For.Range), nil, true)
@@ -238,15 +235,15 @@ func (m *MultiGurl) Send() {
 
 		For := m.Child[j].For
 
-		m.RunFor(c, For, core.SaveVar{})
+		m.RunFor(c, For, SaveVar{})
 		m.ChildInitSend(&m.Child[j].Base, nil)
 	}
 }
 
-func BaseParse(g *core.Base, c *conf.Conf, rangeMap core.SaveVar) {
+func BaseParse(g *Base, c *Conf, rangeMap SaveVar) {
 	var (
 		newHeader []string
-		parentMap core.SaveVar
+		parentMap SaveVar
 	)
 
 	if g.Parent != nil {
@@ -343,7 +340,7 @@ func MergeCmd(cfCmd *Gurl, cmd *Gurl, tactics string) {
 	}
 }
 
-func BaseSend(b *core.Base, client *http.Client, c *conf.Conf, valMap core.SaveVar) {
+func BaseSend(b *Base, client *http.Client, c *Conf, valMap SaveVar) {
 	var (
 		rsp     *http.Response
 		body    []byte
@@ -374,7 +371,7 @@ func BaseSend(b *core.Base, client *http.Client, c *conf.Conf, valMap core.SaveV
 		return
 	}
 
-	var curVal core.SaveVar
+	var curVal SaveVar
 
 	defer rsp.Body.Close()
 
@@ -390,12 +387,12 @@ func BaseSend(b *core.Base, client *http.Client, c *conf.Conf, valMap core.SaveV
 			return
 		}
 
-		b.NextMap = core.SaveVar{
+		b.NextMap = SaveVar{
 			"parent_http_body": string(body),
 			"parent_http_code": fmt.Sprintf("%d", rsp.StatusCode),
 		}
 
-		curVal = core.SaveVar{
+		curVal = SaveVar{
 			"http_body": string(body),
 			"http_code": fmt.Sprintf("%d", rsp.StatusCode),
 		}
@@ -578,7 +575,7 @@ func ExecSlice(cmd []string) (*Response, error) {
 			Transport: &transport,
 		},
 		GurlCore: GurlCore{
-			Base: core.Base{
+			Base: Base{
 				Method: *method,
 				F:      *forms,
 				H:      *headers,

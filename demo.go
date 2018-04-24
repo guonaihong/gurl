@@ -1,4 +1,4 @@
-package demo
+package main
 
 import (
 	"os"
@@ -67,7 +67,7 @@ func init() {
 	}
 }
 
-func Gen(name string) []byte {
+func demoGen(name string) []byte {
 	v, ok := genMap[name]
 	if ok {
 		return v
@@ -76,7 +76,7 @@ func Gen(name string) []byte {
 	return []byte("Unkown")
 }
 
-func Usage(name string) {
-	v := Gen(name)
+func demoUsage(name string) {
+	v := demoGen(name)
 	os.Stdout.Write(v)
 }
