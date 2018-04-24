@@ -91,6 +91,10 @@ func main() {
 
 	//fmt.Printf("%v\n", multiGurl.ConfFile)
 	if len(*gen) > 0 {
+		if *gen == "tocmd" {
+			multiGurl.GenCmd()
+			return
+		}
 		multiGurl.GenYaml(*gen)
 		return
 	}
