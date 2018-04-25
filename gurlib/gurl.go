@@ -552,6 +552,7 @@ func (g *Gurl) MultipartExec() (*Response, error) {
 
 	gurlRsp.Body, err = ioutil.ReadAll(rsp.Body)
 	if err != nil {
+		fmt.Printf("ioutil.Read:%s\n", err)
 		return nil, err
 	}
 
@@ -595,6 +596,8 @@ func ExecSlice(cmd []string) (*Response, error) {
 	forms := commandlLine.StringSlice("F", []string{}, "Specify HTTP multipart POST data (H)")
 	output := commandlLine.String("o", "", "Write to FILE instead of stdout")
 	method := commandlLine.String("X", "", "Specify request command to use")
+	memForms := commandlLine.StringSlice("mF", []string{}, "Specify HTTP multipart POST data (H)")
+	url := commandlLine.String("url", "", "Specify a URL to fetch")
 
 	commandlLine.Parse(cmd[1:])
 
@@ -602,6 +605,11 @@ func ExecSlice(cmd []string) (*Response, error) {
 
 	transport := http.Transport{
 		DisableKeepAlives: true,
+	}
+
+	u := *url
+	if u == "" {
+		u = as[0]
 	}
 
 	g := Gurl{
@@ -614,12 +622,32 @@ func ExecSlice(cmd []string) (*Response, error) {
 				F:      *forms,
 				H:      *headers,
 				O:      *output,
-				Url:    as[0],
+				Url:    u,
 			},
 		},
 	}
 
+	g.RunUrl = g.Url
+	g.RunF = g.F
 	g.MemInit()
+
+	formCache := []FormVal{}
+	for _, v := range *memForms {
+
+		pos := strings.Index(v, "=")
+		if pos == -1 {
+			continue
+		}
+
+		fv := FormVal{}
+
+		fv.Tag = v[:pos]
+		fv.Body = []byte(v[pos+1:])
+		fv.Fname = "test"
+		formCache = append(formCache, fv)
+	}
+
+	g.GurlCore.FormCache = append(g.GurlCore.FormCache, formCache...)
 
 	return g.sendExec()
 }
