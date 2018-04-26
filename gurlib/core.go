@@ -318,6 +318,7 @@ func (b *Base) MultipartNew() (*http.Request, chan error, error) {
 			part, err = writer.CreateFormFile(k, filepath.Base(fname))
 			if err != nil {
 				errChan <- err
+				return
 			}
 
 			if _, err = io.Copy(part, body); err != nil {

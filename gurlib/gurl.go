@@ -545,8 +545,8 @@ func (g *Gurl) MultipartExec() (*Response, error) {
 
 	defer rsp.Body.Close()
 
-	if e := <-errChan; e != nil {
-		fmt.Printf("error:%s\n", e)
+	if err := <-errChan; err != nil {
+		fmt.Printf("error:%s\n", err)
 		return nil, err
 	}
 
@@ -629,6 +629,7 @@ func ExecSlice(cmd []string) (*Response, error) {
 
 	g.RunUrl = g.Url
 	g.RunF = g.F
+	g.RunH = g.H
 	g.MemInit()
 
 	formCache := []FormVal{}
