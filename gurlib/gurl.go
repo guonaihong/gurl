@@ -61,7 +61,7 @@ type Base struct {
 
 	FormCache []FormVal `json:"-"`
 
-	Body string `json:"body,omitempty"`
+	Body []byte `json:"body,omitempty"`
 	Cond `json:"-"`
 }
 
@@ -249,7 +249,7 @@ func (b *Base) MemInit() {
 			return
 		}
 
-		b.Body = string(body)
+		b.Body = body
 	}
 
 	b.FormCache = []FormVal{}
@@ -282,8 +282,9 @@ func (b *Base) Multipart(client *http.Client) (rsp *http.Response) {
 		return
 	}
 
-	if e := <-errChan; e != nil {
-		fmt.Printf("error:%s\n", e)
+	if err := <-errChan; err != nil {
+		fmt.Printf("error:%s\n", err)
+		return nil
 	}
 
 	return rsp
@@ -383,31 +384,8 @@ func (b *Base) BodyRequest(client *http.Client) (rsp *http.Response) {
 		req *http.Request
 	)
 
-	req, err = http.NewRequest(b.Method, b.RunUrl, strings.NewReader(b.Body))
-	if err != nil {
-		return
-	}
-
-	b.HeadersAdd(req)
-
-	c := client
-
-	rsp, err = c.Do(req)
-	if err != nil {
-		return
-	}
-
-	return rsp
-}
-
-func (b *Base) NotMultipart(client *http.Client) (rsp *http.Response) {
-
-	var (
-		err error
-		req *http.Request
-	)
-
-	req, err = http.NewRequest(b.Method, b.RunUrl, nil)
+	body := bytes.NewBuffer(b.Body)
+	req, err = http.NewRequest(b.Method, b.RunUrl, body)
 	if err != nil {
 		return
 	}
@@ -804,12 +782,10 @@ func BaseSend(b *Base, client *http.Client, c *Conf, valMap SaveVar) {
 		}
 	}
 
-	if len(b.Body) > 0 {
-		rsp = b.BodyRequest(client)
-	} else if len(b.FormCache) > 0 {
+	if len(b.FormCache) > 0 {
 		rsp = b.Multipart(client)
 	} else {
-		rsp = b.NotMultipart(client)
+		rsp = b.BodyRequest(client)
 	}
 
 	if rsp == nil {

@@ -26,11 +26,11 @@ env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
 #### examples
 * 命令行
   * 发送multipart格式到服务端
-  ```
+  ```bash
   ./gurl -F text="test" http://xxx.xxx.xxx.xxx:port
   ```
   * 发送json格式数据到服务端
-  ```
+  ```bash
   ./gurl -J username:admin -J passwd:123456 -J bool_val:=true  -J int_val:=3 -J float_val:=0.3 http://127.0.0.1:12345
   {
     "bool_val": true,
@@ -42,7 +42,7 @@ env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
 
   ```
   * 如果key:value的数据是从文件或者终端里面读取，可以使用下面的方面转成json格式发给服务端
-  ```
+  ```bash
   echo "username:admin passwd:123456 bool_val:=true int_val:=3 float_val:=0.3"|xargs -d' ' -I {} echo -J {}|xargs ./gurl -url :12345
   {
     "bool_val": true,
@@ -53,7 +53,7 @@ env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
   }
   ```
   * 发送多层json格式数据到服务端
-  ```
+  ```bash
   ./gurl -J a.b.c.d:=true -J a.b.c.e:=111 http://127.0.0.1:12345
   {
     "a": {
@@ -68,7 +68,7 @@ env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
 
   ```
   * 向multipart字段中插入json数据
-  ```
+  ```bash
   ./gurl -Jfa text=DisplayText:good -Jfa text=Language:cn -Jfa text2=look:me -F text=good :12345
 
   --4361c4e6ae1b083e9e0508a7b40eb215bccd265c4bed00137cc7d112e890
@@ -86,15 +86,15 @@ env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
   --4361c4e6ae1b083e9e0508a7b40eb215bccd265c4bed00137cc7d112e890--
   ```
   * 开ac个线程, 发送an个请求
-  ```
+  ```bash
   ./gurl -an 10 -ac 2 -F text=good :1234
   ```
   * 指定多个http header
-  ```
+  ```bash
   ./gurl -H "header1:value1" -H "header2:value2" http://xxx.xxx.xxx.xxx:port
   ```
   * 定时发送(每隔一秒从服务里取结果)
-  ```
+  ```bash
   ./gurl -cron "@every 1s" -H "session-id:f0c371f1-f418-477c-92d4-129c16c8e4d5" http://127.0.0.1:12345/asr/result
   ```
   * url支持简写种类
@@ -105,7 +105,7 @@ env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
 
  * 配置文件
    * 从命令行的数据生成配置文件(选项 -gen cmd)
-  ```
+  ```bash
   ./gurl -X POST -F mode="A" -F text='good' -F voice=@./good.opus -gen cmd "http://127.0.0.1:24909/eval/opus" &>demo.yaml
   cat demo.yaml 
 
@@ -120,7 +120,7 @@ env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
   ./gurl -K ./demo.yml
   ```
   * 把配置文件转成命令行形式(选项-gen tocmd)
-  ```
+  ```bash
   ./gurl -K demo.yaml  -gen tocmd
   gurl -X POST -F mode=A -F text=good -F voice=@./good.opus -url http://127.0.0.1:24909/eval/opus
   ```
