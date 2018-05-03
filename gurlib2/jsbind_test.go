@@ -1,19 +1,48 @@
-package lib
+package gurlib2
 
 import (
 	"fmt"
-	"github.com/robertkrimen/otto"
+	"io/ioutil"
+	"net/http"
 	"testing"
 )
 
+func TestNewJsEngine(t *testing.T) {
+	js := NewJsEngine(&http.Client{})
+
+	all, err := ioutil.ReadFile("slice.js")
+	if err != nil {
+		panic(err.Error())
+	}
+
+	_, err = js.VM.Run(string(all))
+	if err != nil {
+		fmt.Printf("%s\n", err)
+	}
+}
+
 func TestRegister(t *testing.T) {
-	vm := otto.New()
 
-	Register(vm)
+	c := http.Client{}
+	js := NewJsEngine(&c)
+	_, err := js.VM.Run(`
+	sessionId = "sid";
+	xnumber = 0;
+	var rsp = gurl({
+		H : [
+		"X-Number:" + xnumber,
+		"session-id:" + sessionId,
+		],
 
-	_, err := vm.Run(`
+		/*
+		MF : [
+		"voice=" + gurl_copy(all, i, i + 4096), 
+		]
+		*/
+	});
 	all = gurl_readfile("./slice.js");
 
+	console.log(gurl_uuid())
 	gurl_sleep("250ms")
 	var xnumber = 0;
 	for (var i = 0, l = gurl_len(all); i < l; i += 4096) {

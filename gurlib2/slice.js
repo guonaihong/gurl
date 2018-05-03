@@ -1,7 +1,7 @@
 
 var config = {
     H :[
-        appkey:haha,
+        "appkey:haha",
     ],
     url:'http://192.168.6.128:24987/asr/opus'
 };
@@ -13,11 +13,12 @@ var files = [
 
 slice_one = function(fname){
 
-    all = gurl_readfile(fname);
-
     var xnumber = 0;
     var sessionId = gurl_uuid();
-    for (i = 0; i < gurl_len(all); i += 4096) {
+    var step = 4
+
+    all = gurl_readfile(fname);
+    for (i = 0; i < gurl_len(all); i += step) {
         var rsp = gurl({
             H : [
                 config.H[0],
@@ -26,7 +27,7 @@ slice_one = function(fname){
             ],
 
             MF : [
-                "voice=" + gurl_copy(all, i, i + 4096), 
+                "voice=" + gurl_copy(all, i, i + step), 
             ]
         });
 
@@ -38,7 +39,7 @@ slice_one = function(fname){
             gurl_format_json(rsp.http_body)
         }
 
-        gurl_sleep("250ms")
+        gurl_sleep("1s")
         xnumber++;
     }
 
@@ -49,13 +50,12 @@ slice_one = function(fname){
         ],
 
         MF : [
-            "voice=" + gurl_copy(all, i, i + 4096), 
+            "voice=" + gurl_copy(all, i, i + step), 
         ]
     });
 }
 
-//(function(){
 for (var fname in files) {
-    slice_one(fname)
+    console.log("---->" + files[fname])
+    slice_one(files[fname])
 }
-//})()
