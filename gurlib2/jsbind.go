@@ -30,11 +30,15 @@ func (j *JsEngine) JsGurl(call otto.FunctionCall) otto.Value {
 	o, err := call.Argument(0).Export()
 	if err != nil {
 		fmt.Printf("err:%v\n", o)
+		return otto.Value{}
 	}
 
 	m := o.(map[string]interface{})
 
-	g := Gurl{}
+	g := Gurl{
+		Client: j.c,
+	}
+	g.MemInit()
 	for k, v := range m {
 		switch strings.ToLower(k) {
 		case "h":
@@ -73,15 +77,27 @@ func (j *JsEngine) JsGurl(call otto.FunctionCall) otto.Value {
 
 					parseMF(v, &formCache)
 				}
+				fmt.Printf("--->%#v\n", formCache)
 				g.GurlCore.FormCache =
 					append(g.GurlCore.FormCache, formCache...)
 			}
 		}
 	}
 
-	g.MemInit()
-	g.sendExec()
-	return otto.Value{}
+	rsp, _ := g.sendExec()
+	for k := range m {
+		delete(m, k)
+	}
+
+	m["status_code"] = rsp.StatusCode
+	m["body"] = string(rsp.Body)
+	m["err"] = rsp.Err
+
+	result, err := j.VM.ToValue(m)
+	if err != nil {
+		fmt.Printf("err:%s\n", err)
+	}
+	return result
 }
 
 func JsReadFile(call otto.FunctionCall) otto.Value {
@@ -133,10 +149,30 @@ func JsUUID(call otto.FunctionCall) otto.Value {
 	return result
 }
 
+func JsExtract(call otto.FunctionCall) otto.Value {
+	all := call.Argument(0).String()
+
+	start, err := call.Argument(1).ToInteger()
+	if err != nil {
+		fmt.Printf("%s\n", err)
+		return otto.Value{}
+	}
+
+	end, err := call.Argument(2).ToInteger()
+	if err != nil {
+		fmt.Printf("%s\n", err)
+		return otto.Value{}
+	}
+
+	result, _ := otto.ToValue(all[start:end])
+	return result
+}
+
 func register(vm *otto.Otto, js *JsEngine) {
 	vm.Set("gurl_readfile", JsReadFile)
 	vm.Set("gurl_len", JsLen)
 	vm.Set("gurl_sleep", JsSleep)
 	vm.Set("gurl_uuid", JsUUID)
 	vm.Set("gurl", js.JsGurl)
+	vm.Set("gurl_extract", JsExtract)
 }

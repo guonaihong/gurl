@@ -16,9 +16,14 @@ slice_one = function(fname){
     var xnumber = 0;
     var sessionId = gurl_uuid();
     var step = 4
+    var all = gurl_readfile(fname);
 
-    all = gurl_readfile(fname);
-    for (i = 0; i < gurl_len(all); i += step) {
+    for (var i = 0, l = gurl_len(all); i < l; i += step) {
+        var end  = i + step;
+        if (end > gurl_len(all)) {
+            end = gurl_len(all)
+        }
+
         var rsp = gurl({
             H : [
                 config.H[0],
@@ -27,16 +32,17 @@ slice_one = function(fname){
             ],
 
             MF : [
-                "voice=" + gurl_copy(all, i, i + step), 
-            ]
+                "voice=" + gurl_extract(all, i, end), 
+            ],
+            url : config.url
         });
 
         if (rsp.err != "") {
             console.log("rsp error is " + rsp.err)
         }
 
-        if (rsp.http_code === 200) {
-            gurl_format_json(rsp.http_body)
+        if (rsp.status_code === 200) {
+            gurl_format_json(rsp.body)
         }
 
         gurl_sleep("1s")
@@ -50,8 +56,9 @@ slice_one = function(fname){
         ],
 
         MF : [
-            "voice=" + gurl_copy(all, i, i + step), 
-        ]
+            "voice=" + gurl_extract(all, i, i + step), 
+        ],
+        url : config.url
     });
 }
 

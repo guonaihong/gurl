@@ -23,7 +23,6 @@ type FormVal struct {
 }
 
 type GurlCore struct {
-	NoSend bool   `json:"no_send,omitempty"`
 	Method string `json:"method,omitempty"`
 
 	J   []string `json:"J,omitempty"`
@@ -375,7 +374,7 @@ func (b *GurlCore) BodyRequest(client *http.Client) (rsp *http.Response) {
 }
 
 type Gurl struct {
-	http.Client `json:"-"`
+	*http.Client `json:"-"`
 
 	GurlCore
 }
@@ -399,17 +398,17 @@ func MergeCmd(cfCmd *Gurl, cmd *Gurl, tactics string) {
 	}
 }
 
-func (g *GurlCore) Send(client *http.Client) {
+func (g *Gurl) Send() {
+	g.send(g.Client)
+}
+
+func (g *GurlCore) send(client *http.Client) {
 	var (
 		rsp     *http.Response
 		body    []byte
 		err     error
 		needVar bool
 	)
-
-	if g.NoSend {
-		return
-	}
 
 	if len(g.Method) == 0 {
 		g.Method = "GET"
@@ -591,7 +590,7 @@ func ExecSlice(cmd []string) (*Response, error) {
 	}
 
 	g := Gurl{
-		Client: http.Client{
+		Client: &http.Client{
 			Transport: &transport,
 		},
 		GurlCore: GurlCore{
