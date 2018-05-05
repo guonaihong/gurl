@@ -150,7 +150,11 @@ func main() {
 				js := gurlib.NewJsEngine(&client)
 				defer wg.Done()
 				for range work {
-					js.VM.Run(string(all))
+					_, err := js.VM.Run(string(all))
+					if err != nil {
+						fmt.Printf("%s\n", err)
+						os.Exit(1)
+					}
 				}
 			}()
 		}

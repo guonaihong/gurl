@@ -392,6 +392,7 @@ func (g *GurlCore) GetOrBodyExec(client *http.Client) (*Response, error) {
 		return &Response{Err: err.Error()}, err
 	}
 
+	gurlRsp.StatusCode = rsp.StatusCode
 	return gurlRsp, nil
 }
 

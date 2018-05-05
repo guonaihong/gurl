@@ -13,7 +13,7 @@ import (
 func TestNewJsEngine(t *testing.T) {
 	js := NewJsEngine(&http.Client{})
 
-	all, err := ioutil.ReadFile("slice_test.js")
+	all, err := ioutil.ReadFile("test.js")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -97,7 +97,7 @@ func TestRegister(t *testing.T) {
 		]
 		*/
 	});
-	all = gurl_readfile("./slice_test.js");
+	all = gurl_readfile("./test.js");
 
 	console.log(gurl_uuid())
 	gurl_sleep("250ms")

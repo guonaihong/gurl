@@ -1,6 +1,8 @@
 package gurlib
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"github.com/robertkrimen/otto"
 	"github.com/satori/go.uuid"
@@ -77,7 +79,8 @@ func (j *JsEngine) JsGurl(call otto.FunctionCall) otto.Value {
 
 					parseMF(v, &formCache)
 				}
-				fmt.Printf("--->%#v\n", formCache)
+
+				//fmt.Printf("--->%#v\n", formCache)
 				g.GurlCore.FormCache =
 					append(g.GurlCore.FormCache, formCache...)
 			}
@@ -95,7 +98,7 @@ func (j *JsEngine) JsGurl(call otto.FunctionCall) otto.Value {
 
 	result, err := j.VM.ToValue(m)
 	if err != nil {
-		fmt.Printf("err:%s\n", err)
+		fmt.Printf("--->err:%s\n", err)
 	}
 	return result
 }
@@ -168,6 +171,19 @@ func JsExtract(call otto.FunctionCall) otto.Value {
 	return result
 }
 
+func JsFjson(call otto.FunctionCall) otto.Value {
+	all := call.Argument(0).String()
+
+	out := &bytes.Buffer{}
+	err := json.Indent(out, []byte(all), "", "  ")
+	if err != nil {
+		return call.Argument(0)
+	}
+
+	result, _ := otto.ToValue(out.String())
+	return result
+}
+
 func register(vm *otto.Otto, js *JsEngine) {
 	vm.Set("gurl_readfile", JsReadFile)
 	vm.Set("gurl_len", JsLen)
@@ -175,4 +191,5 @@ func register(vm *otto.Otto, js *JsEngine) {
 	vm.Set("gurl_uuid", JsUUID)
 	vm.Set("gurl", js.JsGurl)
 	vm.Set("gurl_extract", JsExtract)
+	vm.Set("gurl_fjson", JsFjson)
 }
