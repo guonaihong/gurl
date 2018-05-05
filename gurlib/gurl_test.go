@@ -1,32 +1,29 @@
 package gurlib
 
 import (
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"os"
 	"testing"
 )
 
-func TestExecSlice2(t *testing.T) {
-	rsp, err := ExecSlice([]string{
-		"gurl",
-		"-X",
-		"POST",
-		"-F",
-		"text=good",
-		"-o",
-		"tst.log",
-		"http://127.0.0.1:5002",
-	})
-
-	t.Logf("err(%v), rsp(%#v)\n", err, rsp)
-}
-
 func TestExecSlice(t *testing.T) {
-	rsp, err := ExecSlice([]string{
+	handle := func(w http.ResponseWriter, r *http.Request) {
+		io.Copy(os.Stdout, r.Body)
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(handle))
+
+	ExecSlice([]string{
 		"gurl",
+		"-H",
+		"appkey:www",
+		"-H",
+		"session:sid",
 		"-F",
 		"text=good",
-		"http://127.0.0.1:5002",
+		"-url",
+		server.URL,
 	})
-
-	t.Logf("err(%v), rsp(%#v)\n", err, rsp)
-
 }

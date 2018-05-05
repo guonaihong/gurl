@@ -1,4 +1,4 @@
-package gurlib2
+package gurlib
 
 import (
 	"bytes"
