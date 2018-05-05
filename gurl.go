@@ -121,23 +121,24 @@ func main() {
 
 	work := make(chan struct{}, 1000)
 	wg := sync.WaitGroup{}
+	defer wg.Wait()
 
 	go func() {
 
+		defer close(work)
 		if *an >= 0 {
 
 			for i, n := 0, *an; i < n; i++ {
 				work <- struct{}{}
 			}
 
-		} else {
-
-			for {
-				work <- struct{}{}
-			}
+			return
 		}
 
-		close(work)
+		for {
+			work <- struct{}{}
+		}
+
 	}()
 
 	if len(*conf) > 0 {
@@ -154,19 +155,18 @@ func main() {
 			}()
 		}
 
-	} else {
-
-		g.MemInit()
-		for i, c := 0, *ac; i < c; i++ {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				for range work {
-					g.Send()
-				}
-			}()
-		}
+		return
 	}
 
-	wg.Wait()
+	g.MemInit()
+	for i, c := 0, *ac; i < c; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for range work {
+				g.Send()
+			}
+		}()
+	}
+
 }
