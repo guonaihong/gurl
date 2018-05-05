@@ -234,33 +234,6 @@ func (b *GurlCore) MemInit() {
 	}
 }
 
-func (b *GurlCore) Multipart(client *http.Client) (rsp *http.Response) {
-
-	var req *http.Request
-
-	req, errChan, err := b.MultipartNew()
-	if err != nil {
-		fmt.Printf("multipart new fail:%s\n", err)
-		return
-	}
-
-	b.HeadersAdd(req)
-
-	c := client
-	rsp, err = c.Do(req)
-	if err != nil {
-		fmt.Printf("client do fail:%s\n", err)
-		return
-	}
-
-	if err := <-errChan; err != nil {
-		fmt.Printf("error:%s\n", err)
-		return nil
-	}
-
-	return rsp
-}
-
 func (b *GurlCore) MultipartNew() (*http.Request, chan error, error) {
 
 	var err error
@@ -348,31 +321,6 @@ func (b *GurlCore) WriteFile(rsp *http.Response, body []byte) {
 	io.Copy(fd, rsp.Body)
 }
 
-func (b *GurlCore) BodyRequest(client *http.Client) (rsp *http.Response) {
-
-	var (
-		err error
-		req *http.Request
-	)
-
-	body := bytes.NewBuffer(b.Body)
-	req, err = http.NewRequest(b.Method, b.Url, body)
-	if err != nil {
-		return
-	}
-
-	b.HeadersAdd(req)
-
-	c := client
-
-	rsp, err = c.Do(req)
-	if err != nil {
-		return
-	}
-
-	return rsp
-}
-
 type Gurl struct {
 	*http.Client `json:"-"`
 
@@ -403,57 +351,13 @@ func (g *Gurl) Send() {
 }
 
 func (g *GurlCore) send(client *http.Client) {
-	var (
-		rsp     *http.Response
-		body    []byte
-		err     error
-		needVar bool
-	)
-
-	if len(g.Method) == 0 {
-		g.Method = "GET"
-		if len(g.FormCache) > 0 {
-			g.Method = "POST"
-		}
+	rsp, _ := g.sendExec(client)
+	if rsp.Err == "" && len(g.O) > 0 {
+		g.writeBytes(rsp.Body)
 	}
-
-	if len(g.FormCache) > 0 {
-		rsp = g.Multipart(client)
-	} else {
-		rsp = g.BodyRequest(client)
-	}
-
-	if rsp == nil {
-		return
-	}
-
-	defer rsp.Body.Close()
-
-	if len(g.Url) > 0 || needVar {
-
-		body, err = ioutil.ReadAll(rsp.Body)
-		if err != nil {
-			return
-		}
-
-	}
-
-	if len(g.O) > 0 {
-		g.WriteFile(rsp, body)
-		goto last
-	}
-
-	if len(body) > 0 {
-		os.Stdout.Write(body)
-		goto last
-	}
-
-	io.Copy(os.Stdout, rsp.Body)
-
-last:
 }
 
-func (g *Gurl) writeBytes(rsp *http.Response, all []byte) {
+func (g *GurlCore) writeBytes(all []byte) {
 	fd, err := os.Create(g.O)
 	if err != nil {
 		return
@@ -463,20 +367,21 @@ func (g *Gurl) writeBytes(rsp *http.Response, all []byte) {
 	fd.Write(all)
 }
 
-func (g *Gurl) NotMultipartExec() (*Response, error) {
+func (g *GurlCore) GetOrBodyExec(client *http.Client) (*Response, error) {
 	var rsp *http.Response
 	var req *http.Request
 	var err error
 
-	req, err = http.NewRequest(g.Method, g.Url, nil)
+	body := bytes.NewBuffer(g.Body)
+	req, err = http.NewRequest(g.Method, g.Url, body)
+	gurlRsp := &Response{}
 	if err != nil {
 		return &Response{Err: err.Error()}, err
 	}
 
-	gurlRsp := &Response{}
 	g.HeadersAdd(req)
 
-	rsp, err = g.Client.Do(req)
+	rsp, err = client.Do(req)
 	if err != nil {
 		return &Response{Err: err.Error()}, err
 	}
@@ -487,14 +392,10 @@ func (g *Gurl) NotMultipartExec() (*Response, error) {
 		return &Response{Err: err.Error()}, err
 	}
 
-	if len(g.O) > 0 {
-		g.writeBytes(rsp, gurlRsp.Body)
-	}
-
 	return gurlRsp, nil
 }
 
-func (g *Gurl) MultipartExec() (*Response, error) {
+func (g *GurlCore) MultipartExec(client *http.Client) (*Response, error) {
 
 	var rsp *http.Response
 	var req *http.Request
@@ -508,7 +409,7 @@ func (g *Gurl) MultipartExec() (*Response, error) {
 	gurlRsp := &Response{}
 	g.HeadersAdd(req)
 
-	rsp, err = g.Client.Do(req)
+	rsp, err = client.Do(req)
 	if err != nil {
 		fmt.Printf("client do fail:%s:URL(%s)\n", err, req.URL)
 		return &Response{Err: err.Error()}, err
@@ -527,17 +428,12 @@ func (g *Gurl) MultipartExec() (*Response, error) {
 		return &Response{Err: err.Error()}, err
 	}
 
-	if len(g.O) > 0 {
-
-		g.writeBytes(rsp, gurlRsp.Body)
-	}
-
 	gurlRsp.StatusCode = rsp.StatusCode
 
 	return gurlRsp, nil
 }
 
-func (g *Gurl) sendExec() (*Response, error) {
+func (g *GurlCore) sendExec(client *http.Client) (*Response, error) {
 	if len(g.Method) == 0 {
 		g.Method = "GET"
 		if len(g.FormCache) > 0 {
@@ -546,10 +442,10 @@ func (g *Gurl) sendExec() (*Response, error) {
 	}
 
 	if len(g.FormCache) > 0 {
-		return g.MultipartExec()
+		return g.MultipartExec(client)
 	}
 
-	return g.NotMultipartExec()
+	return g.GetOrBodyExec(client)
 }
 
 func parseMF(mf string, formCache *[]FormVal) {
@@ -612,5 +508,5 @@ func ExecSlice(cmd []string) (*Response, error) {
 
 	g.GurlCore.FormCache = append(g.GurlCore.FormCache, formCache...)
 
-	return g.sendExec()
+	return g.sendExec(g.Client)
 }

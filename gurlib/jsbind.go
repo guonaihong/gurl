@@ -84,7 +84,7 @@ func (j *JsEngine) JsGurl(call otto.FunctionCall) otto.Value {
 		}
 	}
 
-	rsp, _ := g.sendExec()
+	rsp, _ := g.sendExec(j.c)
 	for k := range m {
 		delete(m, k)
 	}

@@ -105,7 +105,7 @@ env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
 
  * 配置文件
    * 从命令行的数据生成配置文件(选项 -gen cmd)
-  ```bash
+  ```js
   ./gurl -X POST -F mode=A -F text=good -F voice=@./good.opus -url http://127.0.0.1:24909/eval/opus -gen &>demo.cf.js 
   var cmd = {
       "method": "POST",
@@ -118,7 +118,7 @@ env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
   };
   gurl(cmd);
   ```
-  * 把配置文件转成命令行形式(选项-gen tocmd)
+  * 把配置文件转成命令行形式(选项-gen)
   ```bash
   ./gurl -K demo.cf.js -gen
   gurl -X POST -F mode=A -F text=good -F voice=@./good.opus -url http://127.0.0.1:24909/eval/opus
