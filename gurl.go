@@ -41,7 +41,7 @@ func main() {
 	conf := flag.String("K", "", "Read js config from FILE")
 	output := flag.String("o", "", "Write to FILE instead of stdout")
 	method := flag.String("X", "", "Specify request command to use")
-	gen := flag.String("gen", "", "Generate the default js configuration file")
+	gen := flag.Bool("gen", false, "Generate the default js configuration file")
 	toJson := flag.StringSlice("J", []string{}, `Turn key:value into {"key": "value"})`)
 	url := flag.String("url", "", "Specify a URL to fetch")
 	an := flag.Int("an", 1, "Number of requests to perform")
@@ -51,7 +51,7 @@ func main() {
 
 	as := flag.Args()
 	Url := *url
-	if *url == "" && len(as) == 0 && len(*conf) == 0 && len(*gen) == 0 {
+	if *url == "" && len(as) == 0 && len(*conf) == 0 && !*gen {
 		flag.Usage()
 		return
 	}
@@ -84,7 +84,12 @@ func main() {
 		},
 	}
 
-	if len(*gen) > 0 {
+	if *gen {
+		if len(*conf) > 0 {
+			gurlib.Js2Cmd(*conf)
+			return
+		}
+
 		gurlib.Cmd2Js(&g)
 		return
 	}
@@ -100,6 +105,7 @@ func main() {
 			js = gurlib.NewJsEngine(&client)
 		}
 
+		g.MemInit()
 		cron.AddFunc(*cronExpr, func() {
 			if len(*conf) > 0 {
 				all, _ := ioutil.ReadFile(*conf)
