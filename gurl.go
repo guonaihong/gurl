@@ -10,6 +10,11 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
+)
+
+const (
+	DefaultConnections = 10000
 )
 
 func modifyUrl(u string) string {
@@ -32,6 +37,131 @@ func modifyUrl(u string) string {
 	return u
 }
 
+func cmdBenchMain(c, n int, url string,
+	work chan struct{}, wg *sync.WaitGroup,
+	g *gurlib.Gurl) {
+
+	g.MemInit()
+	report := gurlib.NewReport(c, n, url)
+
+	for i := 0; i < c; i++ {
+
+		wg.Add(1)
+
+		go func() {
+			defer wg.Done()
+
+			for range work {
+
+				taskNow := time.Now()
+				rsp, err := g.Send()
+				if err != nil {
+					report.AddErrNum()
+					continue
+				}
+
+				report.Cal(taskNow, rsp)
+			}
+		}()
+	}
+
+	report.StartReport()
+	wg.Wait()
+	report.Wait()
+	os.Exit(0)
+}
+
+func cmdMain(c int, work chan struct{}, wg *sync.WaitGroup,
+	g *gurlib.Gurl) {
+
+	defer func() {
+		wg.Wait()
+		os.Exit(0)
+	}()
+
+	g.MemInit()
+	for i := 0; i < c; i++ {
+
+		wg.Add(1)
+
+		go func() {
+			defer wg.Done()
+			for range work {
+				g.Send()
+			}
+		}()
+	}
+
+}
+
+/*
+//TODO
+func jsConfBenchMain(c, n int, url string,
+	conf string, work chan struct{},
+	wg *sync.WaitGroup, g *gurlib.Gurl) {
+
+	report := gurlib.NewReport(c, n, url)
+	all, _ := ioutil.ReadFile(conf)
+
+	for i := 0; i < c; i++ {
+		wg.Add(1)
+
+		go func() {
+			js := gurlib.NewJsEngine(g.Client)
+
+			defer wg.Done()
+
+			for range work {
+
+				taskNow := time.Now()
+				rsp, err := js.VM.Run(string(all))
+				if err != nil {
+					report.AddErrNum()
+					fmt.Printf("%s\n", err)
+					os.Exit(1)
+				}
+
+				report.Cal(taskNow, rsp)
+			}
+		}()
+	}
+
+	report.StartReport()
+	wg.Wait()
+	report.Wait()
+	os.Exit(0)
+}
+*/
+
+func jsConfMain(c int, conf string, work chan struct{},
+	wg *sync.WaitGroup, g *gurlib.Gurl) {
+
+	defer func() {
+		wg.Wait()
+		os.Exit(0)
+	}()
+
+	all, _ := ioutil.ReadFile(conf)
+	for i := 0; i < c; i++ {
+		wg.Add(1)
+
+		go func() {
+			js := gurlib.NewJsEngine(g.Client)
+
+			defer wg.Done()
+
+			for range work {
+				_, err := js.VM.Run(string(all))
+				if err != nil {
+					fmt.Printf("%s\n", err)
+					os.Exit(1)
+				}
+			}
+		}()
+	}
+
+}
+
 func main() {
 
 	headers := flag.StringSlice("H", []string{}, "Pass custom header LINE to server (H)")
@@ -46,12 +176,13 @@ func main() {
 	url := flag.String("url", "", "Specify a URL to fetch")
 	an := flag.Int("an", 1, "Number of requests to perform")
 	ac := flag.Int("ac", 1, "Number of multiple requests to make")
+	bench := flag.Bool("bench", false, "Run benchmarks test")
 
 	flag.Parse()
 
 	as := flag.Args()
 	Url := *url
-	if *url == "" && len(as) == 0 && len(*conf) == 0 && !*gen {
+	if *url == "" && len(as) == 0 && len(*conf) == 0 && !*gen && !*bench {
 		flag.Usage()
 		return
 	}
@@ -69,8 +200,11 @@ func main() {
 
 	Url = modifyUrl(Url)
 
-	client := http.Client{}
-
+	client := http.Client{
+		Transport: &http.Transport{
+			MaxIdleConnsPerHost: DefaultConnections,
+		},
+	}
 	g := gurlib.Gurl{
 		Client: &client,
 		GurlCore: gurlib.GurlCore{
@@ -121,7 +255,6 @@ func main() {
 
 	work := make(chan struct{}, 1000)
 	wg := sync.WaitGroup{}
-	defer wg.Wait()
 
 	go func() {
 
@@ -142,35 +275,16 @@ func main() {
 	}()
 
 	if len(*conf) > 0 {
+		jsConfMain(*ac, *conf, work, &wg, &g)
 
-		all, _ := ioutil.ReadFile(*conf)
-		for i, c := 0, *ac; i < c; i++ {
-			wg.Add(1)
-			go func() {
-				js := gurlib.NewJsEngine(&client)
-				defer wg.Done()
-				for range work {
-					_, err := js.VM.Run(string(all))
-					if err != nil {
-						fmt.Printf("%s\n", err)
-						os.Exit(1)
-					}
-				}
-			}()
+		if *bench {
+			//TODO
 		}
-
-		return
 	}
 
-	g.MemInit()
-	for i, c := 0, *ac; i < c; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for range work {
-				g.Send()
-			}
-		}()
+	if *bench {
+		cmdBenchMain(*ac, *an, Url, work, &wg, &g)
 	}
 
+	cmdMain(*ac, work, &wg, &g)
 }

@@ -8,9 +8,10 @@ gurl 是使用curl过程中的痛点改进。gurl实现了本人经常使用的c
 
 #### 功能
 * 支持curl一部分功能
-* 支持httpie一部功能
+* 支持httpie一部分功能
+* 支持ab一部分功能
 * 定时运行gurl(支持cron表达式)
-* 支持结构化配置文件(里面有if, else, for, func)
+* 支持js作为配置文件(可以写if, else, for, func)
 * url 支持简写
 
 #### 推荐的使用流程
@@ -18,7 +19,8 @@ gurl 是使用curl过程中的痛点改进。gurl实现了本人经常使用的c
 1. 如果命令行里面有难以记忆的部分，并且也需要经常使用它，可使用gurl -gen &>demo.cf.js 命令保存到文件里
 2. gurl -K demo.cf.js根据配置文件里面的数据访问服务端
 3. 如果要修改demo.cf.js，也不熟悉配置文件的写法，可以通过./gurl -K demo.cf.js -gen 命令把demo.cf.js的数据转成命令行，然后重复第1步操作
-#### build
+
+#### install
 ```bash
 env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
 ```
@@ -123,6 +125,54 @@ env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
   ./gurl -K demo.cf.js -gen
   gurl -X POST -F mode=A -F text=good -F voice=@./good.opus -url http://127.0.0.1:24909/eval/opus
   ```
+ * bench  
+ 使用-bench选项打开bench模式，可以压测服务端，诊断性能瓶颈，输出如下 
+ ```bash
+ ./gurl -ac 10 -an 1000000 -F text=good  -bench http://127.0.0.1:12346 
+ 
+    Benchmarking 127.0.0.1 (be patient)
+    Completed 100000 requests
+    Completed 200000 requests
+    Completed 300000 requests
+    Completed 400000 requests
+    Completed 500000 requests
+    Completed 600000 requests
+    Completed 700000 requests
+    Completed 800000 requests
+    Completed 900000 requests
+    Completed 1000000 requests
+    Finished 1000000 requests
+    
+    
+    Server Software:        gnc
+    Server Hostname:        
+    Server Port:            12346
+    
+    Document Path:          
+    Document Length:        0 bytes
+    
+    Concurrency Level:      10
+    Time taken for tests:   35.293 seconds
+    Complete requests:      1000000
+    Failed requests:        0
+    Total transferred:      131000000 bytes
+    HTML transferred:       0 bytes
+    Requests per second:    28334.54 [#/sec] (mean)
+    Time per request:       0.353 [ms] (mean)
+    Time per request:       0.035 [ms] (mean, across all concurrent requests)
+    Transfer rate:          3711.83 [Kbytes/sec] received
+    Percentage of the requests served within a certain time (ms)
+      50%    0
+      66%    0
+      75%    0
+      80%    0
+      90%    0
+      95%    0
+      98%    1
+      99%    1
+     100%    14
+
+ ```
 #### TODO
 * bugfix
 * 一些用着很顺手的功能添加

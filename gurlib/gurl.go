@@ -256,6 +256,10 @@ func (b *GurlCore) MultipartNew() (*http.Request, chan error, error) {
 
 			if len(fname) == 0 {
 				part, err = writer.CreateFormField(k)
+				if err != nil {
+					fmt.Printf("%s\n", err)
+					continue
+				}
 				part.Write([]byte(fv.Body))
 				continue
 			}
@@ -328,33 +332,24 @@ type Gurl struct {
 }
 
 type Response struct {
-	StatusCode int    `json:"status_code"`
-	Err        string `json:"err"`
-	Body       []byte `json:"body"`
+	StatusCode int         `json:"status_code"`
+	Err        string      `json:"err"`
+	Body       []byte      `json:"body"`
+	Status     string      `json:"status"`
+	Proto      string      `json:"proto"`
+	Header     http.Header `json:"header"`
 }
 
-//todo reflect copy
-func MergeCmd(cfCmd *Gurl, cmd *Gurl, tactics string) {
-	switch tactics {
-	case "append":
-		if len(cmd.Url) > 0 {
-			cfCmd.Url = cmd.Url
-		}
-	case "set":
-		*cfCmd = *cmd
-
-	}
+func (g *Gurl) Send() (*Response, error) {
+	return g.send(g.Client)
 }
 
-func (g *Gurl) Send() {
-	g.send(g.Client)
-}
-
-func (g *GurlCore) send(client *http.Client) {
-	rsp, _ := g.sendExec(client)
+func (g *GurlCore) send(client *http.Client) (*Response, error) {
+	rsp, err := g.sendExec(client)
 	if rsp.Err == "" && len(g.O) > 0 {
 		g.writeBytes(rsp.Body)
 	}
+	return rsp, err
 }
 
 func (g *GurlCore) writeBytes(all []byte) {
@@ -365,6 +360,13 @@ func (g *GurlCore) writeBytes(all []byte) {
 	defer fd.Close()
 
 	fd.Write(all)
+}
+
+func rspCopy(dst *Response, src *http.Response) {
+	dst.StatusCode = src.StatusCode
+	dst.Status = src.Status
+	dst.Proto = src.Proto
+	dst.Header = src.Header
 }
 
 func (g *GurlCore) GetOrBodyExec(client *http.Client) (*Response, error) {
@@ -392,7 +394,7 @@ func (g *GurlCore) GetOrBodyExec(client *http.Client) (*Response, error) {
 		return &Response{Err: err.Error()}, err
 	}
 
-	gurlRsp.StatusCode = rsp.StatusCode
+	rspCopy(gurlRsp, rsp)
 	return gurlRsp, nil
 }
 
@@ -429,8 +431,7 @@ func (g *GurlCore) MultipartExec(client *http.Client) (*Response, error) {
 		return &Response{Err: err.Error()}, err
 	}
 
-	gurlRsp.StatusCode = rsp.StatusCode
-
+	rspCopy(gurlRsp, rsp)
 	return gurlRsp, nil
 }
 
