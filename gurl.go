@@ -169,7 +169,7 @@ func main() {
 	jfa := flag.StringSlice("Jfa", []string{}, "Specify HTTP multipart POST json data (H)")
 	cronExpr := flag.String("cron", "", "Cron expression")
 	conf := flag.String("K", "", "Read js config from FILE")
-	output := flag.String("o", "", "Write to FILE instead of stdout")
+	output := flag.String("o", "stdout", "Write to FILE instead of stdout")
 	method := flag.String("X", "", "Specify request command to use")
 	gen := flag.Bool("gen", false, "Generate the default js configuration file")
 	toJson := flag.StringSlice("J", []string{}, `Turn key:value into {"key": "value"})`)
@@ -275,6 +275,7 @@ func main() {
 	}()
 
 	if len(*conf) > 0 {
+		g.O = ""
 		jsConfMain(*ac, *conf, work, &wg, &g)
 
 		if *bench {
@@ -283,6 +284,7 @@ func main() {
 	}
 
 	if *bench {
+		g.O = ""
 		cmdBenchMain(*ac, *an, Url, work, &wg, &g)
 	}
 

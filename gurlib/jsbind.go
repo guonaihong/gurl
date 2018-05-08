@@ -191,5 +191,6 @@ func register(vm *otto.Otto, js *JsEngine) {
 	vm.Set("gurl_uuid", JsUUID)
 	vm.Set("gurl", js.JsGurl)
 	vm.Set("gurl_extract", JsExtract)
+	vm.Set("gurl_substring", JsExtract)
 	vm.Set("gurl_fjson", JsFjson)
 }

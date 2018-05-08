@@ -311,18 +311,19 @@ func (b *GurlCore) HeadersAdd(req *http.Request) {
 	}
 }
 
-func (b *GurlCore) WriteFile(rsp *http.Response, body []byte) {
-	fd, err := os.Create(b.O)
+func (g *GurlCore) writeBytes(all []byte) {
+	if g.O == "stdout" {
+		os.Stdout.Write(all)
+		return
+	}
+
+	fd, err := os.Create(g.O)
 	if err != nil {
 		return
 	}
 	defer fd.Close()
 
-	if len(body) > 0 {
-		fd.Write(body)
-	}
-
-	io.Copy(fd, rsp.Body)
+	fd.Write(all)
 }
 
 type Gurl struct {
@@ -350,16 +351,6 @@ func (g *GurlCore) send(client *http.Client) (*Response, error) {
 		g.writeBytes(rsp.Body)
 	}
 	return rsp, err
-}
-
-func (g *GurlCore) writeBytes(all []byte) {
-	fd, err := os.Create(g.O)
-	if err != nil {
-		return
-	}
-	defer fd.Close()
-
-	fd.Write(all)
 }
 
 func rspCopy(dst *Response, src *http.Response) {
