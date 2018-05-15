@@ -40,6 +40,7 @@ func (j *JsEngine) JsGurl(call otto.FunctionCall) otto.Value {
 	g := Gurl{
 		Client: j.c,
 	}
+
 	g.MemInit()
 	for k, v := range m {
 		switch strings.ToLower(k) {
@@ -56,7 +57,7 @@ func (j *JsEngine) JsGurl(call otto.FunctionCall) otto.Value {
 		case "f":
 			f, ok := v.([]string)
 			if ok {
-				g.F = f
+				form(f, &g.FormCache)
 			}
 
 		case "url":

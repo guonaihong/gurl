@@ -118,7 +118,8 @@ env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
       ],
       "url": "http://127.0.0.1:24909/eval/opus"
   };
-  gurl(cmd);
+  var rsp = gurl(cmd);
+  console.log(rsp.body);
   ```
   * 把配置文件转成命令行形式(选项-gen -K 配置文件)
   ```bash

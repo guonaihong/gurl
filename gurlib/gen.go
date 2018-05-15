@@ -24,7 +24,8 @@ func Cmd2Js(g *Gurl) {
 
 	buf.Write(all)
 	buf.WriteString(";\n")
-	buf.WriteString("gurl(cmd);\n")
+	buf.WriteString("var rsp = gurl(cmd);\n")
+	buf.WriteString("console.log(rsp.body);\n")
 	io.Copy(os.Stdout, &buf)
 }
 
