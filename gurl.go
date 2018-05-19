@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -177,6 +178,8 @@ func main() {
 	an := flag.Int("an", 1, "Number of requests to perform")
 	ac := flag.Int("ac", 1, "Number of multiple requests to make")
 	bench := flag.Bool("bench", false, "Run benchmarks test")
+	conns := flag.Int("conns", DefaultConnections, "Max open idle connections per target host")
+	cpus := flag.Int("cpus", 0, "Number of CPUs to use")
 
 	flag.Parse()
 
@@ -200,9 +203,13 @@ func main() {
 
 	Url = modifyUrl(Url)
 
+	if *cpus > 0 {
+		runtime.GOMAXPROCS(*cpus)
+	}
+
 	client := http.Client{
 		Transport: &http.Transport{
-			MaxIdleConnsPerHost: DefaultConnections,
+			MaxIdleConnsPerHost: *conns,
 		},
 	}
 	g := gurlib.Gurl{
