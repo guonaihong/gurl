@@ -9,7 +9,7 @@ gurl 是使用curl过程中的痛点改进。gurl实现了本人经常使用的c
 #### 功能
 * 支持curl一部分功能
 * 支持httpie一部分功能
-* 支持ab一部分功能
+* 支持ab的一部分功能，并且性能比ab命令更高
 * 定时运行gurl(支持cron表达式)
 * 支持js作为配置文件(可以写if, else, for, func)
 * url 支持简写
@@ -29,7 +29,17 @@ env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
 * 命令行
   * 发送multipart格式到服务端
   ```bash
+  # 1.发送字符串test到服务端
   ./gurl -F text="test" http://xxx.xxx.xxx.xxx:port
+  # 2.打开名为file的文件，并用其内容发送到服务端
+  ./gurl -F text="@./file" http://xxx.xxx.xxx.xxx:port
+  ```
+  * 发送http body数据到服务端
+  ```bash
+  # 1.发送字符串test到服务端
+  gurl -d "good" :12345
+  # 2.打开为file的文件，并用其内容发送到服务端
+  gurl -d "@./file" :12345
   ```
   * 发送json格式数据到服务端
   ```bash

@@ -207,12 +207,28 @@ func jsonFromAppend(JF []string, fm *[]FormVal) {
 	*fm = append(*fm, formVals...)
 }
 
-func (b *GurlCore) MemInit() {
+func parseBody(Body *[]byte) {
+	if bytes.HasPrefix(*Body, []byte("@")) {
+		body, err := ioutil.ReadFile(string((*Body)[1:]))
+		if err != nil {
+			log.Fatalf("%v\n", err)
+			return
+		}
 
-	if len(b.J) > 0 {
+		*Body = body
+	}
+}
+
+func (g *GurlCore) MemInit() {
+
+	if len(g.Body) > 0 {
+		parseBody(&g.Body)
+	}
+
+	if len(g.J) > 0 {
 		bodyJson := map[string]interface{}{}
 
-		toJson(b.J, bodyJson)
+		toJson(g.J, bodyJson)
 
 		body, err := json.Marshal(&bodyJson)
 		if err != nil {
@@ -220,21 +236,21 @@ func (b *GurlCore) MemInit() {
 			return
 		}
 
-		b.Body = body
+		g.Body = body
 	}
 
-	b.FormCache = []FormVal{}
+	g.FormCache = []FormVal{}
 
-	if len(b.Jfa) > 0 {
-		jsonFromAppend(b.Jfa, &b.FormCache)
+	if len(g.Jfa) > 0 {
+		jsonFromAppend(g.Jfa, &g.FormCache)
 	}
 
-	if len(b.F) > 0 {
-		form(b.F, &b.FormCache)
+	if len(g.F) > 0 {
+		form(g.F, &g.FormCache)
 	}
 }
 
-func (b *GurlCore) MultipartNew() (*http.Request, chan error, error) {
+func (g *GurlCore) MultipartNew() (*http.Request, chan error, error) {
 
 	var err error
 
@@ -248,7 +264,7 @@ func (b *GurlCore) MultipartNew() (*http.Request, chan error, error) {
 
 		var part io.Writer
 
-		for _, fv := range b.FormCache {
+		for _, fv := range g.FormCache {
 
 			k := fv.Tag
 
@@ -283,7 +299,7 @@ func (b *GurlCore) MultipartNew() (*http.Request, chan error, error) {
 	}()
 
 	var req *http.Request
-	req, err = http.NewRequest(b.Method, b.Url, pipeReader)
+	req, err = http.NewRequest(g.Method, g.Url, pipeReader)
 	if err != nil {
 		fmt.Printf("http neq request:%s\n", err)
 		return nil, errChan, err

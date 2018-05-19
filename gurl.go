@@ -193,7 +193,8 @@ func main() {
 	bench := flag.Bool("bench", false, "Run benchmarks test")
 	conns := flag.Int("conns", DefaultConnections, "Max open idle connections per target host")
 	cpus := flag.Int("cpus", 0, "Number of CPUs to use")
-	echo := flag.String("echo", "", "http echo server")
+	echo := flag.String("echo", "", "HTTP echo server")
+	data := flag.String("d", "", "HTTP POST data")
 
 	flag.Parse()
 
@@ -240,6 +241,7 @@ func main() {
 			J:      *toJson,
 			Jfa:    *jfa,
 			Url:    Url,
+			Body:   []byte(*data),
 		},
 	}
 

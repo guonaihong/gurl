@@ -72,6 +72,12 @@ func (j *JsEngine) JsGurl(call otto.FunctionCall) otto.Value {
 				g.O = o
 			}
 
+		case "d":
+			body, ok := v.(string)
+			if ok {
+				g.Body = body
+				parseBody(&g.Body)
+			}
 		case "mf":
 			mf, ok := v.([]string)
 			if ok {
