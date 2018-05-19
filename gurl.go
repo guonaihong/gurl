@@ -5,6 +5,7 @@ import (
 	"github.com/NaihongGuo/flag"
 	"github.com/guonaihong/gurl/gurlib"
 	"github.com/robfig/cron"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -163,6 +164,18 @@ func jsConfMain(c int, conf string, work chan struct{},
 
 }
 
+func httpEcho(addr string) {
+
+	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
+		io.Copy(os.Stdout, req.Body)
+		w.Header().Add("Server", "gurl-server")
+		req.Body.Close()
+		return
+	})
+
+	fmt.Println(http.ListenAndServe(addr, nil))
+}
+
 func main() {
 
 	headers := flag.StringSlice("H", []string{}, "Pass custom header LINE to server (H)")
@@ -180,8 +193,13 @@ func main() {
 	bench := flag.Bool("bench", false, "Run benchmarks test")
 	conns := flag.Int("conns", DefaultConnections, "Max open idle connections per target host")
 	cpus := flag.Int("cpus", 0, "Number of CPUs to use")
+	echo := flag.String("echo", "", "http echo server")
 
 	flag.Parse()
+
+	if *echo != "" {
+		httpEcho(*echo)
+	}
 
 	as := flag.Args()
 	Url := *url
