@@ -75,7 +75,7 @@ func (j *JsEngine) JsGurl(call otto.FunctionCall) otto.Value {
 		case "d":
 			body, ok := v.(string)
 			if ok {
-				g.Body = body
+				g.Body = []byte(body)
 				parseBody(&g.Body)
 			}
 		case "mf":
