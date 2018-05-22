@@ -22,6 +22,8 @@ type FormVal struct {
 	Body  []byte
 }
 
+const ADD_LINE = 1 << 62
+
 type GurlCore struct {
 	Method string `json:"method,omitempty"`
 
@@ -36,6 +38,7 @@ type GurlCore struct {
 	FormCache []FormVal `json:"-"`
 
 	Body []byte `json:"body,omitempty"`
+	Flag int
 }
 
 func parseVal(bodyJson map[string]interface{}, key, val string) {
@@ -333,11 +336,25 @@ func (g *GurlCore) writeBytes(all []byte) {
 		return
 	}
 
-	fd, err := os.Create(g.O)
+	if g.O == "stderr" {
+		os.Stderr.Write(all)
+		return
+	}
+
+	fd, err := os.OpenFile(g.O, g.Flag, 0644)
 	if err != nil {
 		return
 	}
 	defer fd.Close()
+
+	if g.Flag&ADD_LINE > 0 {
+		out := &bytes.Buffer{}
+		out.Write(all)
+		out.Write([]byte("\n"))
+		fd.Write(out.Bytes())
+
+		return
+	}
 
 	fd.Write(all)
 }

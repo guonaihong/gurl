@@ -136,19 +136,24 @@ func jsConfBenchMain(c, n int, url string,
 */
 
 func jsConfMain(c int, conf string, work chan struct{},
-	wg *sync.WaitGroup, g *gurlib.Gurl) {
+	wg *sync.WaitGroup, g *gurlib.Gurl, confArgs string) {
 
 	defer func() {
 		wg.Wait()
 		os.Exit(0)
 	}()
 
-	all, _ := ioutil.ReadFile(conf)
+	all, err := ioutil.ReadFile(conf)
+	if err != nil {
+		os.Exit(1)
+	}
+
 	for i := 0; i < c; i++ {
 		wg.Add(1)
 
 		go func() {
 			js := gurlib.NewJsEngine(g.Client)
+			js.VM.Set("gurl_args", confArgs)
 
 			defer wg.Done()
 
@@ -176,6 +181,29 @@ func httpEcho(addr string) {
 	fmt.Println(http.ListenAndServe(addr, nil))
 }
 
+func toFlag(output, str string) (flag int) {
+
+	if output != "stdout" && output != "stderr" {
+		flag |= os.O_CREATE | os.O_RDWR
+	}
+
+	flags := strings.Split(str, "|")
+	for _, v := range flags {
+		switch v {
+		case "create":
+			flag |= os.O_CREATE
+		case "append":
+			flag |= os.O_APPEND
+		case "line":
+			flag |= gurlib.ADD_LINE
+		case "trunc":
+			flag |= os.O_TRUNC
+		}
+	}
+
+	return flag
+}
+
 func main() {
 
 	headers := flag.StringSlice("H", []string{}, "Pass custom header LINE to server (H)")
@@ -183,7 +211,9 @@ func main() {
 	jfa := flag.StringSlice("Jfa", []string{}, "Specify HTTP multipart POST json data (H)")
 	cronExpr := flag.String("cron", "", "Cron expression")
 	conf := flag.String("K", "", "Read js config from FILE")
+	confArgs := flag.String("Kargs", "", "Command line parameters passed to the configuration file")
 	output := flag.String("o", "stdout", "Write to FILE instead of stdout")
+	oflag := flag.String("oflag", "", "Control the way you write(append|line|trunc)")
 	method := flag.String("X", "", "Specify request command to use")
 	gen := flag.Bool("gen", false, "Generate the default js configuration file")
 	toJson := flag.StringSlice("J", []string{}, `Turn key:value into {"key": "value"})`)
@@ -241,6 +271,7 @@ func main() {
 			J:      *toJson,
 			Jfa:    *jfa,
 			Url:    Url,
+			Flag:   toFlag(*output, *oflag),
 			Body:   []byte(*data),
 		},
 	}
@@ -269,7 +300,12 @@ func main() {
 		g.MemInit()
 		cron.AddFunc(*cronExpr, func() {
 			if len(*conf) > 0 {
-				all, _ := ioutil.ReadFile(*conf)
+				all, err := ioutil.ReadFile(*conf)
+				if err != nil {
+					os.Exit(1)
+				}
+
+				js.VM.Set("gurl_args", *confArgs)
 				js.VM.Run(string(all))
 				return
 			}
@@ -303,7 +339,7 @@ func main() {
 
 	if len(*conf) > 0 {
 		g.O = ""
-		jsConfMain(*ac, *conf, work, &wg, &g)
+		jsConfMain(*ac, *conf, work, &wg, &g, *confArgs)
 
 		if *bench {
 			//TODO

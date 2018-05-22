@@ -114,7 +114,10 @@ env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
     * -url http://127.0.0.1:1234 --> :1234
     * -url http://127.0.0.1/path --> /path
 
-
+  * -oflag 一般和-o选项配合使用(控制写文件的行为)
+    * -oflag append 默认-o的行为是新建文件然后写入，如果开启-ac -an选项，可以使用append肥所有的结果保存到一个文件中
+    * -oflag line 如果服务端返回的结果，想使用换行符分隔  
+    小提示: -oflag 后面的命令可以组合使用 "append|line"的意思是：把服务端的输出追加到某个文本中，并用'\n'分隔符
  * 配置文件
    * 从命令行的数据生成配置文件(选项 -gen)
   ```js
