@@ -225,6 +225,7 @@ func main() {
 	cpus := flag.Int("cpus", 0, "Number of CPUs to use")
 	echo := flag.String("echo", "", "HTTP echo server")
 	data := flag.String("d", "", "HTTP POST data")
+	verbose := flag.Bool("v", false, "Make the operation more talkative")
 
 	flag.Parse()
 
@@ -261,6 +262,7 @@ func main() {
 			MaxIdleConnsPerHost: *conns,
 		},
 	}
+
 	g := gurlib.Gurl{
 		Client: &client,
 		GurlCore: gurlib.GurlCore{
@@ -273,6 +275,7 @@ func main() {
 			Url:    Url,
 			Flag:   toFlag(*output, *oflag),
 			Body:   []byte(*data),
+			V:      *verbose,
 		},
 	}
 

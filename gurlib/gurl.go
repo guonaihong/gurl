@@ -39,6 +39,7 @@ type GurlCore struct {
 
 	Body []byte `json:"body,omitempty"`
 	Flag int
+	V    bool `json:"-"`
 }
 
 func parseVal(bodyJson map[string]interface{}, key, val string) {
@@ -330,13 +331,42 @@ func (b *GurlCore) HeadersAdd(req *http.Request) {
 	}
 }
 
-func (g *GurlCore) writeBytes(all []byte) {
+func (g *GurlCore) writeHead(rsp *Response, w io.Writer) {
+
+	if !g.V {
+		return
+	}
+
+	if rsp.Req != nil {
+		req := rsp.Req
+		path := "/"
+		if len(req.URL.Path) > 0 {
+			path = req.URL.Path
+		}
+		fmt.Fprintf(w, "> %s %s %s\r\n", req.Method, path, req.Proto)
+		for k, v := range req.Header {
+			fmt.Fprintf(w, "> %s: %s\r\n", k, strings.Join(v, ","))
+		}
+
+		fmt.Fprint(w, ">\r\n")
+	}
+
+	fmt.Fprintf(w, "< %s %s\r\n", rsp.Proto, rsp.Status)
+	for k, v := range rsp.Header {
+		fmt.Fprintf(w, "< %s: %s\r\n", k, strings.Join(v, ","))
+	}
+}
+
+func (g *GurlCore) writeBytes(rsp *Response) {
+	all := rsp.Body
 	if g.O == "stdout" {
+		g.writeHead(rsp, os.Stdout)
 		os.Stdout.Write(all)
 		return
 	}
 
 	if g.O == "stderr" {
+		g.writeHead(rsp, os.Stderr)
 		os.Stderr.Write(all)
 		return
 	}
@@ -347,6 +377,7 @@ func (g *GurlCore) writeBytes(all []byte) {
 	}
 	defer fd.Close()
 
+	g.writeHead(rsp, fd)
 	if g.Flag&ADD_LINE > 0 {
 		out := &bytes.Buffer{}
 		out.Write(all)
@@ -372,6 +403,7 @@ type Response struct {
 	Status     string      `json:"status"`
 	Proto      string      `json:"proto"`
 	Header     http.Header `json:"header"`
+	Req        *http.Request
 }
 
 func (g *Gurl) Send() (*Response, error) {
@@ -381,7 +413,7 @@ func (g *Gurl) Send() (*Response, error) {
 func (g *GurlCore) send(client *http.Client) (*Response, error) {
 	rsp, err := g.sendExec(client)
 	if rsp.Err == "" && len(g.O) > 0 {
-		g.writeBytes(rsp.Body)
+		g.writeBytes(rsp)
 	}
 	return rsp, err
 }
@@ -391,6 +423,7 @@ func rspCopy(dst *Response, src *http.Response) {
 	dst.Status = src.Status
 	dst.Proto = src.Proto
 	dst.Header = src.Header
+	dst.Req = src.Request
 }
 
 func (g *GurlCore) GetOrBodyExec(client *http.Client) (*Response, error) {
