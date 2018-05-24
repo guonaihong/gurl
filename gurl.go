@@ -154,6 +154,9 @@ func jsConfMain(c int, conf string, work chan struct{},
 		go func() {
 			js := gurlib.NewJsEngine(g.Client)
 			js.VM.Set("gurl_args", conf+" "+confArgs)
+			if len(g.Url) > 0 {
+				js.VM.Set("gurl_url", g.Url)
+			}
 
 			defer wg.Done()
 
