@@ -3,7 +3,9 @@ package gurlib
 import (
 	"bytes"
 	"encoding/json"
+	"flag"
 	"fmt"
+	//"github.com/NaihongGuo/flag"
 	"github.com/robertkrimen/otto"
 	"github.com/satori/go.uuid"
 	"io/ioutil"
@@ -191,6 +193,55 @@ func JsFjson(call otto.FunctionCall) otto.Value {
 	return result
 }
 
+func JsGurlFlagParse(call otto.FunctionCall) otto.Value {
+	args := call.ArgumentList[1:]
+
+	original := call.ArgumentList[0]
+
+	var cmd []string
+	var resultArgs []string
+	var commandlLine *flag.FlagSet
+
+	if original, err := original.ToString(); err == nil {
+		//TODO
+		cmd = strings.Split(original, " ")
+	} else {
+		goto done
+	}
+
+	if len(cmd) < 2 {
+		goto done
+	}
+
+	commandlLine = flag.NewFlagSet(cmd[0], flag.ExitOnError)
+	resultArgs = make([]string, len(args))
+	for k, arg := range args {
+		o, err := arg.Export()
+		if err != nil {
+			continue
+		}
+
+		parseArgs, ok := o.([]string)
+		if !ok || len(parseArgs) != 3 {
+			continue
+		}
+
+		commandlLine.StringVar(&resultArgs[k],
+			parseArgs[0], parseArgs[1], parseArgs[2])
+
+		fmt.Printf("k%s:parseArgs:%#v\n", parseArgs[0], parseArgs)
+	}
+
+	fmt.Printf("cmd:%#v\n", cmd[1:])
+	commandlLine.Parse(cmd[1:])
+
+	fmt.Printf("%s\n", resultArgs)
+done:
+	//todo delete
+	result, _ := otto.ToValue("")
+	return result
+}
+
 func register(vm *otto.Otto, js *JsEngine) {
 	vm.Set("gurl_readfile", JsReadFile)
 	vm.Set("gurl_len", JsLen)
@@ -200,4 +251,5 @@ func register(vm *otto.Otto, js *JsEngine) {
 	vm.Set("gurl_extract", JsExtract)
 	vm.Set("gurl_substring", JsExtract)
 	vm.Set("gurl_fjson", JsFjson)
+	vm.Set("gurl_flag_parse", JsGurlFlagParse)
 }

@@ -153,7 +153,7 @@ func jsConfMain(c int, conf string, work chan struct{},
 
 		go func() {
 			js := gurlib.NewJsEngine(g.Client)
-			js.VM.Set("gurl_args", confArgs)
+			js.VM.Set("gurl_args", conf+" "+confArgs)
 
 			defer wg.Done()
 
@@ -308,7 +308,7 @@ func main() {
 					os.Exit(1)
 				}
 
-				js.VM.Set("gurl_args", *confArgs)
+				js.VM.Set("gurl_args", *conf+""+*confArgs)
 				js.VM.Run(string(all))
 				return
 			}
