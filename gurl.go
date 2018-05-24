@@ -229,6 +229,7 @@ func main() {
 	echo := flag.String("echo", "", "HTTP echo server")
 	data := flag.String("d", "", "HTTP POST data")
 	verbose := flag.Bool("v", false, "Make the operation more talkative")
+	agent := flag.String("A", "gurl", "Send User-Agent STRING to server")
 
 	flag.Parse()
 
@@ -279,6 +280,7 @@ func main() {
 			Flag:   toFlag(*output, *oflag),
 			Body:   []byte(*data),
 			V:      *verbose,
+			A:      *agent,
 		},
 	}
 

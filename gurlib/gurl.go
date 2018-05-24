@@ -40,6 +40,7 @@ type GurlCore struct {
 	Body []byte `json:"body,omitempty"`
 	Flag int
 	V    bool `json:"-"`
+	A    string
 }
 
 func parseVal(bodyJson map[string]interface{}, key, val string) {
@@ -314,9 +315,9 @@ func (g *GurlCore) MultipartNew() (*http.Request, chan error, error) {
 	return req, errChan, nil
 }
 
-func (b *GurlCore) HeadersAdd(req *http.Request) {
+func (g *GurlCore) HeadersAdd(req *http.Request) {
 
-	for _, v := range b.H {
+	for _, v := range g.H {
 
 		headers := strings.Split(v, ":")
 
@@ -329,6 +330,13 @@ func (b *GurlCore) HeadersAdd(req *http.Request) {
 
 		req.Header.Add(headers[0], headers[1])
 	}
+
+	if len(g.A) > 0 {
+		req.Header.Set("User-Agent", g.A)
+	}
+	req.Header.Set("Accept", "*/*")
+	req.Header.Set("Host", req.URL.Host)
+
 }
 
 func (g *GurlCore) writeHead(rsp *Response, w io.Writer) {
