@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/NaihongGuo/flag"
+	"github.com/guonaihong/flag"
 	"github.com/guonaihong/gurl/gurlib"
 	"github.com/robfig/cron"
 	"io"
@@ -209,15 +209,15 @@ func toFlag(output, str string) (flag int) {
 
 func main() {
 
-	headers := flag.StringSlice("H", []string{}, "Pass custom header LINE to server (H)")
-	forms := flag.StringSlice("F", []string{}, "Specify HTTP multipart POST data (H)")
+	headers := flag.StringSlice("H, header", []string{}, "Pass custom header LINE to server (H)")
+	forms := flag.StringSlice("F, form", []string{}, "Specify HTTP multipart POST data (H)")
 	jfa := flag.StringSlice("Jfa", []string{}, "Specify HTTP multipart POST json data (H)")
 	cronExpr := flag.String("cron", "", "Cron expression")
-	conf := flag.String("K", "", "Read js config from FILE")
+	conf := flag.String("K, config", "", "Read js config from FILE")
 	confArgs := flag.String("Kargs", "", "Command line parameters passed to the configuration file")
-	output := flag.String("o", "stdout", "Write to FILE instead of stdout")
+	output := flag.String("o, output", "stdout", "Write to FILE instead of stdout")
 	oflag := flag.String("oflag", "", "Control the way you write(append|line|trunc)")
-	method := flag.String("X", "", "Specify request command to use")
+	method := flag.String("X, request", "", "Specify request command to use")
 	gen := flag.Bool("gen", false, "Generate the default js configuration file")
 	toJson := flag.StringSlice("J", []string{}, `Turn key:value into {"key": "value"})`)
 	url := flag.String("url", "", "Specify a URL to fetch")
@@ -227,9 +227,9 @@ func main() {
 	conns := flag.Int("conns", DefaultConnections, "Max open idle connections per target host")
 	cpus := flag.Int("cpus", 0, "Number of CPUs to use")
 	echo := flag.String("echo", "", "HTTP echo server")
-	data := flag.String("d", "", "HTTP POST data")
-	verbose := flag.Bool("v", false, "Make the operation more talkative")
-	agent := flag.String("A", "gurl", "Send User-Agent STRING to server")
+	data := flag.String("d, data", "", "HTTP POST data")
+	verbose := flag.Bool("v, verbose", false, "Make the operation more talkative")
+	agent := flag.String("A, user-agent", "gurl", "Send User-Agent STRING to server")
 
 	flag.Parse()
 
