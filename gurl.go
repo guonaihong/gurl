@@ -39,9 +39,80 @@ func modifyUrl(u string) string {
 	return u
 }
 
-func cmdBenchMain(c, n int, url string,
-	work chan struct{}, wg *sync.WaitGroup,
-	g *gurlib.Gurl) {
+type GurlCmd struct {
+	c        int
+	n        int
+	conf     string
+	cronExpr string
+	confArgs string
+	work     chan struct{}
+	wg       sync.WaitGroup
+	*gurlib.Gurl
+}
+
+func (cmd *GurlCmd) Cron(client *http.Client) {
+	cron := cron.New()
+	conf := cmd.conf
+	cronExpr := cmd.cronExpr
+	confArgs := cmd.confArgs
+
+	defer cron.Stop()
+
+	var js *gurlib.JsEngine
+	if len(conf) > 0 {
+		js = gurlib.NewJsEngine(client)
+	}
+
+	cmd.MemInit()
+	cron.AddFunc(cronExpr, func() {
+		if len(conf) > 0 {
+			all, err := ioutil.ReadFile(conf)
+			if err != nil {
+				os.Exit(1)
+			}
+
+			js.VM.Set("gurl_args", conf+""+confArgs)
+			js.VM.Run(string(all))
+			return
+		}
+
+		cmd.Send()
+	})
+
+	cron.Run()
+}
+
+func (cmd *GurlCmd) Producer() {
+	work := cmd.work
+	n := cmd.n
+
+	go func() {
+
+		defer close(work)
+		if cmd.n >= 0 {
+
+			for i := 0; i < n; i++ {
+				work <- struct{}{}
+			}
+
+			return
+		}
+
+		for {
+			work <- struct{}{}
+		}
+
+	}()
+}
+
+func (cmd *GurlCmd) benchMain() {
+
+	c := cmd.c
+	n := cmd.n
+	g := cmd.Gurl
+	url := g.Url
+	work := cmd.work
+	wg := &cmd.wg
 
 	g.MemInit()
 	report := gurlib.NewReport(c, n, url)
@@ -73,8 +144,12 @@ func cmdBenchMain(c, n int, url string,
 	os.Exit(0)
 }
 
-func cmdMain(c int, work chan struct{}, wg *sync.WaitGroup,
-	g *gurlib.Gurl) {
+func (cmd *GurlCmd) main() {
+
+	c := cmd.c
+	work := cmd.work
+	wg := &cmd.wg
+	g := cmd.Gurl
 
 	defer func() {
 		wg.Wait()
@@ -135,8 +210,14 @@ func jsConfBenchMain(c, n int, url string,
 }
 */
 
-func jsConfMain(c int, conf string, work chan struct{},
-	wg *sync.WaitGroup, g *gurlib.Gurl, confArgs string) {
+func (cmd *GurlCmd) jsConfMain() {
+
+	c := cmd.c
+	conf := cmd.conf
+	wg := &cmd.wg
+	work := cmd.work
+	confArgs := cmd.confArgs
+	g := cmd.Gurl
 
 	defer func() {
 		wg.Wait()
@@ -294,60 +375,25 @@ func main() {
 		return
 	}
 
-	if len(*cronExpr) > 0 {
-
-		cron := cron.New()
-
-		defer cron.Stop()
-
-		var js *gurlib.JsEngine
-		if len(*conf) > 0 {
-			js = gurlib.NewJsEngine(&client)
-		}
-
-		g.MemInit()
-		cron.AddFunc(*cronExpr, func() {
-			if len(*conf) > 0 {
-				all, err := ioutil.ReadFile(*conf)
-				if err != nil {
-					os.Exit(1)
-				}
-
-				js.VM.Set("gurl_args", *conf+""+*confArgs)
-				js.VM.Run(string(all))
-				return
-			}
-
-			g.Send()
-		})
-
-		cron.Run()
+	cmd := GurlCmd{
+		c:        *ac,
+		n:        *an,
+		conf:     *conf,
+		cronExpr: *cronExpr,
+		confArgs: *confArgs,
+		Gurl:     &g,
+		work:     make(chan struct{}, 1000),
 	}
 
-	work := make(chan struct{}, 1000)
-	wg := sync.WaitGroup{}
+	if len(*cronExpr) > 0 {
+		cmd.Cron(&client)
+	}
 
-	go func() {
-
-		defer close(work)
-		if *an >= 0 {
-
-			for i, n := 0, *an; i < n; i++ {
-				work <- struct{}{}
-			}
-
-			return
-		}
-
-		for {
-			work <- struct{}{}
-		}
-
-	}()
+	cmd.Producer()
 
 	if len(*conf) > 0 {
 		g.O = ""
-		jsConfMain(*ac, *conf, work, &wg, &g, *confArgs)
+		cmd.jsConfMain()
 
 		if *bench {
 			//TODO
@@ -356,8 +402,8 @@ func main() {
 
 	if *bench {
 		g.O = ""
-		cmdBenchMain(*ac, *an, Url, work, &wg, &g)
+		cmd.benchMain()
 	}
 
-	cmdMain(*ac, work, &wg, &g)
+	cmd.main()
 }
