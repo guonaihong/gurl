@@ -1,27 +1,24 @@
 # gurl
 
 #### Documentation
-* [English](./README_EN.md)
+* [chinese](./README.md)
 
-#### 简介
-gurl 是使用curl过程中的痛点改进。gurl实现了本人经常使用的curl命令行选项。
-日常使用curl脚本发现数据和行为耦合地太严重，如果支持配置文件就好了，如果配置文件里面支持变量，支持for，支持if，支持函数就好了。
-支持在命令行上方便写json数据就好了。
-最后说下gurl的哲学， gurl希望做一个安静的工具，不希望有难用的功能，让使用者爽完就离开它。
+#### Introduction
+Gurl is a pain point in the process of using curl.Gurl implements curl command line options.In daily use, it is found that the data and behavior of the curl script are severely coupled. If the configuration file is supported and the configuration file supports variables, the for, if, and function functions are supported. Support for writing json data on the command line is just fine.Finally, under the philosophy of gurl, gurl hopes to be a quiet tool. It doesn't want to be called bad, let users run away and leave it.
 
-#### 功能
-* 支持curl一部分功能
-* 支持httpie一部分功能
-* 支持ab的一部分功能，并且性能比ab命令更高
-* 定时运行gurl(支持cron表达式)
-* 支持js作为配置文件(可以写if, else, for, func)
-* url 支持简写
+#### Features
+- Supports some of curl's features
+- Supports some of the features of httpie
+- Supports some of the functions of ab, and the performance is higher than the ab command
+- Support regular running gurl (support cron expression function)
+- Support js as configuration file (support for if, else, for, func)
+- Url support abbreviations
 
-#### 推荐的使用流程
-1. 使用gurl命令行选项调通功能，很多用户经过这一步就完成了任务
-1. 如果命令行里面有难以记忆的部分，并且也需要经常使用它，可使用gurl -gen &>demo.cf.js 命令保存到文件里
-2. gurl -K demo.cf.js根据配置文件里面的数据访问服务端
-3. 如果要修改demo.cf.js，也不熟悉配置文件的写法，可以通过./gurl -K demo.cf.js -gen 命令把demo.cf.js的数据转成命令行，然后重复第1步操作
+#### Recommended use process
+1、Using the gurl command line option to enable the function, many users complete the task after this step.
+2、If there is a hard-to-remember part of the command line and you need to use it often, save it to a file using the gurl -gen &>demo.cf.js command.
+3、gurl -K demo.cf.js accesses the server based on the data in the configuration file.
+4、If you want to modify demo.cf.js and you are not familiar with the configuration of the configuration file, you can use the ./gurl -K demo.cf.js -gen command to convert the demo.cf.js data to the command line, and then repeat step 1. operating.
 
 #### install
 ```bash
@@ -29,22 +26,22 @@ env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
 ```
 
 #### examples
-* 命令行
-  * 发送multipart格式到服务端
+* Command Line
+  * Send multipart format to server
   ```bash
-  # 1.发送字符串test到服务端
+  # 1.Send the string “test” to the server
   ./gurl -F text="test" http://xxx.xxx.xxx.xxx:port
-  # 2.打开名为file的文件，并用其内容发送到服务端
+  # 2.Open the file named “file” and send it to the server with its contents
   ./gurl -F text="@./file" http://xxx.xxx.xxx.xxx:port
   ```
-  * 发送http body数据到服务端
+  * Send http body data to server
   ```bash
-  # 1.发送字符串test到服务端
+  # 1.Send the string “test” to the server
   gurl -d "good" :12345
-  # 2.打开为file的文件，并用其内容发送到服务端
+  # 2.Open the file named “file” and send it to the server with its contents
   gurl -d "@./file" :12345
   ```
-  * 发送json格式数据到服务端
+  * Send json format data to server
   ```bash
   ./gurl -J username:admin -J passwd:123456 -J bool_val:=true  -J int_val:=3 -J float_val:=0.3 http://127.0.0.1:12345
   {
@@ -56,7 +53,7 @@ env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
   }
 
   ```
-  * 如果key:value的数据是从文件或者终端里面读取，可以使用下面的方面转成json格式发给服务端
+  * If the data of "key:value" is read from the file or the terminal, you can use the following aspects to send it to the server in json format.
   ```bash
   echo "username:admin passwd:123456 bool_val:=true int_val:=3 float_val:=0.3"|xargs -d' ' -I {} echo -J {}|xargs ./gurl -url :12345
   {
@@ -67,7 +64,7 @@ env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
     "username": "admin"
   }
   ```
-  * 发送多层json格式数据到服务端
+  * Send multi-layer json format data to server
   ```bash
   ./gurl -J a.b.c.d:=true -J a.b.c.e:=111 http://127.0.0.1:12345
   {
@@ -82,7 +79,8 @@ env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
   }
 
   ```
-  * 向multipart字段中插入json数据
+  * Insert json data into the multipart field
+
   ```bash
   ./gurl -Jfa text=DisplayText:good -Jfa text=Language:cn -Jfa text2=look:me -F text=good :12345
 
@@ -100,29 +98,35 @@ env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
   good
   --4361c4e6ae1b083e9e0508a7b40eb215bccd265c4bed00137cc7d112e890--
   ```
-  * 开ac个线程, 发送an个请求
+  * Open "ac" threads, send "an" request
+
   ```bash
   ./gurl -an 10 -ac 2 -F text=good :1234
   ```
-  * 指定多个http header
+  * Specify multiple http headers
+
   ```bash
   ./gurl -H "header1:value1" -H "header2:value2" http://xxx.xxx.xxx.xxx:port
   ```
-  * 定时发送(每隔一秒从服务里取结果)
+  * Send regularly (every second from the service)
+
   ```bash
   ./gurl -cron "@every 1s" -H "session-id:f0c371f1-f418-477c-92d4-129c16c8e4d5" http://127.0.0.1:12345/asr/result
   ```
-  * url支持简写种类
+  * Url supports abbreviated types
     * -url http://127.0.0.1:1234 --> 127.0.0.1:1234
     * -url http://127.0.0.1:1234 --> :1234
     * -url http://127.0.0.1/path --> /path
 
-  * -oflag 一般和-o选项配合使用(控制写文件的行为)
-    * -oflag append 默认-o的行为是新建文件然后写入，如果开启-ac -an选项，可以使用append肥所有的结果保存到一个文件中
-    * -oflag line 如果服务端返回的结果，想使用换行符分隔  
-    小提示: -oflag 后面的命令可以组合使用 "append|line"的意思是：把服务端的输出追加到某个文本中，并用'\n'分隔符
- * 配置文件
-   * 从命令行的数据生成配置文件(选项 -gen)
+  * "-oflag" is generally used with the "-o" option (controls the behavior of writing files)
+
+    * -oflag append: the default behavior of "-o" is to create a new file and then write it. If the "-ac -an" option is enabled, you can use append to save all the results in a file.
+    * -oflag line: if the server returns a result, you want to use a line break to separate.  
+    Tips: Commands following "-oflag" can be combined,
+     "append|line" mean：Append the server's output to a text and use '\n' separator.
+ * Profile
+   * Generate a configuration file from the command line data (option -gen)
+
   ```js
   ./gurl -X POST -F mode=A -F text=good -F voice=@./good.opus -url http://127.0.0.1:24909/eval/opus -gen &>demo.cf.js 
   var cmd = {
@@ -137,13 +141,14 @@ env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
   var rsp = gurl_send(cmd);
   console.log(rsp.body);
   ```
-  * 把配置文件转成命令行形式(选项-gen -K 配置文件)
+  * Turn the configuration file into a command line (option -gen -K configuration file)
   ```bash
   ./gurl -K demo.cf.js -gen
   gurl -X POST -F mode=A -F text=good -F voice=@./good.opus -url http://127.0.0.1:24909/eval/opus
   ```
  * bench  
- 使用-bench选项打开bench模式，可以压测服务端，诊断性能瓶颈，输出如下 
+ Use the "-bench" option to turn on the benchmark mode to test the server and diagnose performance bottlenecks. The output is as follows
+
  ```bash
  ./gurl -ac 10 -an 1000000 -F text=good  -bench http://127.0.0.1:12346 
  
@@ -192,4 +197,4 @@ env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
  ```
 #### TODO
 * bugfix
-* 一些用着很顺手的功能添加
+* Add some very handy features
