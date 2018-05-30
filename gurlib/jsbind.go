@@ -3,14 +3,14 @@ package gurlib
 import (
 	"bytes"
 	"encoding/json"
-	"flag"
+	//"flag"
 	"fmt"
-	"os"
-	//"github.com/NaihongGuo/flag"
+	"github.com/guonaihong/flag"
 	"github.com/robertkrimen/otto"
 	"github.com/satori/go.uuid"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 )
@@ -30,7 +30,27 @@ func NewJsEngine(c *http.Client) *JsEngine {
 	return js
 }
 
-func (j *JsEngine) JsGurlSend(call otto.FunctionCall) otto.Value {
+type GurlHttp struct {
+	js *JsEngine
+}
+
+func (j *JsEngine) GurlHttp(call otto.FunctionCall) otto.Value {
+
+	h := GurlHttp{
+		js: j,
+	}
+
+	m := map[string]interface{}{
+		"send": h.Send,
+	}
+
+	result, _ := j.VM.ToValue(m)
+	return result
+}
+
+func (h *GurlHttp) Send(call otto.FunctionCall) otto.Value {
+
+	j := h.js
 
 	o, err := call.Argument(0).Export()
 	if err != nil {
@@ -66,6 +86,7 @@ func (j *JsEngine) JsGurlSend(call otto.FunctionCall) otto.Value {
 		case "url":
 			url, ok := v.(string)
 			if ok {
+				url = ModifyUrl(url)
 				g.Url = url
 			}
 
@@ -178,62 +199,89 @@ func JsFjson(call otto.FunctionCall) otto.Value {
 	return result
 }
 
-func (j *JsEngine) JsGurlFlagParse(call otto.FunctionCall) otto.Value {
-	args := call.ArgumentList[1:]
-	original := call.ArgumentList[0]
+type opt struct {
+	resultArgs []*string
+	optName    []string
+}
 
-	type Opt struct {
-		optName    []string
-		resultArgs []string
+type GurlFlag struct {
+	commandlLine *flag.FlagSet
+	js           *JsEngine
+	opt
+	cmd []string
+	set bool
+}
+
+func (j *JsEngine) GurlFlag(call otto.FunctionCall) otto.Value {
+	f := GurlFlag{
+		js: j,
 	}
 
-	var cmd []string
-	var commandlLine *flag.FlagSet
-	var opt Opt
+	m := map[string]interface{}{
+		"option": f.Option,
+		"parse":  f.Parse,
+		"usage":  f.Usage,
+	}
+
+	result, _ := j.VM.ToValue(m)
+	return result
+}
+
+func (f *GurlFlag) Option(call otto.FunctionCall) otto.Value {
+	name := call.Argument(0).String()
+	value := call.Argument(1).String()
+	usage := call.Argument(2).String()
+
+	if f.set == false {
+		if original, err := f.js.VM.Get("gurl_args"); err == nil {
+			cmd := strings.Split(original.String(), " ")
+			f.cmd = cmd
+		}
+
+		f.set = true
+	}
+
+	if f.commandlLine == nil {
+		f.commandlLine = flag.NewFlagSet(f.cmd[0], flag.ExitOnError)
+	}
+
+	outValue := ""
+	f.commandlLine.StringVar(&outValue, name, value, usage)
+
+	f.resultArgs = append(f.resultArgs, &outValue)
+	f.optName = append(f.optName, name)
+
+	m := map[string]interface{}{
+		"option": f.Option,
+		"parse":  f.Parse,
+		"usage":  f.Usage,
+	}
+
+	result, _ := f.js.VM.ToValue(m)
+	return result
+}
+
+func (f *GurlFlag) Usage() {
+	f.commandlLine.Usage()
+}
+
+func (f *GurlFlag) Parse() otto.Value {
 	m := map[string]interface{}{}
+	f.commandlLine.Parse(f.cmd[1:])
 
-	if original, err := original.ToString(); err == nil {
-		//TODO
-		cmd = strings.Split(original, " ")
-	} else {
-		goto done
-	}
-
-	if len(cmd) < 2 {
-		goto done
-	}
-
-	commandlLine = flag.NewFlagSet(cmd[0], flag.ExitOnError)
-	opt.resultArgs = make([]string, len(args))
-	opt.optName = make([]string, len(args))
-	for k, arg := range args {
-		o, err := arg.Export()
-		if err != nil {
-			continue
+	for k, v := range f.resultArgs {
+		if pos := strings.Index(f.optName[k], ","); pos != -1 {
+			ks := strings.Split(f.optName[k], ",")
+			for _, kv := range ks {
+				m[strings.TrimSpace(kv)] = *v
+			}
 		}
-
-		parseArgs, ok := o.([]string)
-		if !ok || len(parseArgs) != 3 {
-			continue
-		}
-
-		commandlLine.StringVar(&opt.resultArgs[k],
-			parseArgs[0], parseArgs[1], parseArgs[2])
-
-		opt.optName[k] = parseArgs[0]
+		m[f.optName[k]] = *v
 	}
 
-	//fmt.Printf("cmd:%#v\n", cmd[1:])
-	commandlLine.Parse(cmd[1:])
-
-	for k, v := range opt.resultArgs {
-		m[opt.optName[k]] = v
-	}
-
-done:
-	result, err := j.VM.ToValue(m)
+	result, err := f.js.VM.ToValue(m)
 	if err != nil {
-		fmt.Printf("--->err:%s\n", err)
+		fmt.Printf("-->err:%s\n", err)
 	}
 	return result
 }
@@ -242,8 +290,8 @@ func register(vm *otto.Otto, js *JsEngine) {
 	vm.Set("gurl_readfile", JsReadFile)
 	vm.Set("gurl_sleep", JsSleep)
 	vm.Set("gurl_uuid", JsUUID)
-	vm.Set("gurl_send", js.JsGurlSend)
 	vm.Set("gurl_fjson", JsFjson)
 	vm.Set("gurl_exit", JsExit)
-	vm.Set("gurl_flag_parse", js.JsGurlFlagParse)
+	vm.Set("gurl_http", js.GurlHttp)
+	vm.Set("gurl_flag", js.GurlFlag)
 }

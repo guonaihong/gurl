@@ -1,11 +1,12 @@
 
-var flag = gurl_flag_parse(
-        gurl_args,
-        ["f", "", "audio file name"]
-);
+var program = gurl_flag();
+var flag = program
+   .option("f, file", "", "pcm file")
+   .option("url", "", "http url")
+   .parse()
 
 if (!flag.hasOwnProperty("f")) {
-    console.log("not set -f")
+    flag.Usage()
     gurl_exit(0)
 }
 
@@ -29,7 +30,7 @@ var config = {
 };
 
 try {
-    config.url =  gurl_url
+    config.url =  flag.url  != "" ? flag.url : config.url
 } catch(e) {
     console.log(e)
 }
@@ -38,6 +39,7 @@ var files = [
     flag.f
 ];
 
+var http = gurl_http();
 slice_one = function(fname, step, time){
 
     var xnumber = 0;
@@ -57,7 +59,7 @@ slice_one = function(fname, step, time){
         }
 
         console.log("<" + sessionId + ">","i = ", i, "end = ", end);
-        var rsp = gurl_send({
+        var rsp = http.send({
             H : [
                 config.H[0],
                 "X-Number:" + xnumber,
@@ -85,7 +87,7 @@ slice_one = function(fname, step, time){
         xnumber++;
     }
 
-    var rsp = gurl_send({
+    var rsp = http.send({
         H : [
             config.H[0],
             "X-Number:" + xnumber +"$",
@@ -112,9 +114,10 @@ for (var fname in files) {
         var suffix = getSuffix(files[fname]);
         var setp   = 200;
         if (suffix == "pcm") {
-            suffix =  8000;
+            setp =  8000;
         }
-        slice_one(files[fname], suffix, "250ms")
+        //console.log(files[fname], suffix)
+        slice_one(files[fname], setp, "250ms")
     } catch(e) {
         console.log("call slice_one fail " + e);
         gurl_exit(1)
