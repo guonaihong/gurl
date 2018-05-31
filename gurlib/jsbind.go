@@ -18,6 +18,7 @@ import (
 type JsEngine struct {
 	VM *otto.Otto
 	c  *http.Client
+	*Message
 }
 
 func NewJsEngine(c *http.Client) *JsEngine {
@@ -28,6 +29,22 @@ func NewJsEngine(c *http.Client) *JsEngine {
 
 	register(js.VM, js)
 	return js
+}
+
+func (j *JsEngine) SetMessage(m *Message) {
+	j.Message = m
+	j.Message.js = j
+}
+
+func (j *JsEngine) JsMessage(call otto.FunctionCall) otto.Value {
+
+	m := map[string]interface{}{
+		"read":  j.Message.Read,
+		"write": j.Message.Write,
+	}
+
+	result, _ := j.VM.ToValue(m)
+	return result
 }
 
 type GurlHttp struct {
@@ -294,4 +311,5 @@ func register(vm *otto.Otto, js *JsEngine) {
 	vm.Set("gurl_exit", JsExit)
 	vm.Set("gurl_http", js.GurlHttp)
 	vm.Set("gurl_flag", js.GurlFlag)
+	vm.Set("gurl_message", js.JsMessage)
 }

@@ -20,13 +20,16 @@ const (
 )
 
 type GurlCmd struct {
-	c        int
-	n        int
-	conf     string
-	cronExpr string
-	confArgs string
-	work     chan struct{}
-	wg       sync.WaitGroup
+	c           int
+	n           int
+	conf        string
+	confArgs    string
+	cronExpr    string
+	pconf       string
+	pConfArgs   string
+	work        chan struct{}
+	wg          sync.WaitGroup
+	messageChan *gurlib.MessageChan
 	*gurlib.Gurl
 }
 
@@ -63,25 +66,46 @@ func (cmd *GurlCmd) Cron(client *http.Client) {
 }
 
 func (cmd *GurlCmd) Producer() {
-	work := cmd.work
-	n := cmd.n
+	work, n := cmd.work, cmd.n
+	pconf, pConfArgs := cmd.pconf, cmd.pConfArgs
+	g := cmd.Gurl
 
 	go func() {
 
-		defer close(work)
-		if cmd.n >= 0 {
+		if len(pconf) == 0 {
+			defer close(work)
+			if cmd.n >= 0 {
 
-			for i := 0; i < n; i++ {
-				work <- struct{}{}
+				for i := 0; i < n; i++ {
+					work <- struct{}{}
+				}
+
+				return
 			}
 
+			for {
+				work <- struct{}{}
+			}
 			return
 		}
 
-		for {
-			work <- struct{}{}
+		vmProducer := gurlib.NewJsEngine(g.Client)
+		vmProducer.SetMessage(gurlib.MessageNew(cmd.messageChan))
+		producer, err := ioutil.ReadFile(pconf)
+		if err != nil {
+			fmt.Printf("%s\n", err)
+			os.Exit(1)
 		}
 
+		vmProducer.VM.Set("gurl_args", pconf+" "+pConfArgs)
+		for i := 0; i < n; i++ {
+			_, err := vmProducer.VM.Run(producer)
+			if err != nil {
+				fmt.Printf("%s\n", err)
+				os.Exit(1)
+			}
+		}
+		close(cmd.messageChan.P)
 	}()
 }
 
@@ -192,11 +216,9 @@ func jsConfBenchMain(c, n int, url string,
 
 func (cmd *GurlCmd) jsConfMain() {
 
-	c := cmd.c
-	conf := cmd.conf
-	wg := &cmd.wg
-	work := cmd.work
-	confArgs := cmd.confArgs
+	c, wg, work := cmd.c, &cmd.wg, cmd.work
+	conf, confArgs := cmd.conf, cmd.confArgs
+	pconf := cmd.pconf
 	g := cmd.Gurl
 
 	defer func() {
@@ -214,6 +236,8 @@ func (cmd *GurlCmd) jsConfMain() {
 
 		go func() {
 			js := gurlib.NewJsEngine(g.Client)
+			js.SetMessage(gurlib.MessageNew(cmd.messageChan))
+
 			js.VM.Set("gurl_args", conf+" "+confArgs)
 			if len(g.Url) > 0 {
 				js.VM.Set("gurl_url", g.Url)
@@ -221,11 +245,35 @@ func (cmd *GurlCmd) jsConfMain() {
 
 			defer wg.Done()
 
-			for range work {
-				_, err := js.VM.Run(string(all))
-				if err != nil {
-					fmt.Printf("%s\n", err)
-					os.Exit(1)
+			for {
+				select {
+				case _, ok := <-work:
+					if !ok {
+						if len(pconf) == 0 {
+							return
+						}
+						continue
+					}
+
+					_, err := js.VM.Run(string(all))
+					if err != nil {
+						fmt.Printf("%s\n", err)
+						os.Exit(1)
+					}
+
+				case m, ok := <-cmd.messageChan.P:
+
+					if !ok {
+						return
+					}
+
+					cmd.messageChan.C <- m
+					_, err := js.VM.Run(all)
+
+					if err != nil {
+						fmt.Printf("%s\n", err)
+						os.Exit(1)
+					}
 				}
 			}
 		}()
@@ -275,7 +323,9 @@ func main() {
 	jfa := flag.StringSlice("Jfa", []string{}, "Specify HTTP multipart POST json data (H)")
 	cronExpr := flag.String("cron", "", "Cron expression")
 	conf := flag.String("K, config", "", "Read js config from FILE")
-	confArgs := flag.String("Kargs", "", "Command line parameters passed to the configuration file")
+	confArgs := flag.String("kargs", "", "Command line parameters passed to the configuration file")
+	pconf := flag.String("pk, pconfig", "", "Producer profile")
+	pConfArgs := flag.String("pkargs", "", "Producer profile command line parameters")
 	output := flag.String("o, output", "stdout", "Write to FILE instead of stdout")
 	oflag := flag.String("oflag", "", "Control the way you write(append|line|trunc)")
 	method := flag.String("X, request", "", "Specify request command to use")
@@ -356,13 +406,16 @@ func main() {
 	}
 
 	cmd := GurlCmd{
-		c:        *ac,
-		n:        *an,
-		conf:     *conf,
-		cronExpr: *cronExpr,
-		confArgs: *confArgs,
-		Gurl:     &g,
-		work:     make(chan struct{}, 1000),
+		c:           *ac,
+		n:           *an,
+		conf:        *conf,
+		confArgs:    *confArgs,
+		pconf:       *pconf,
+		pConfArgs:   *pConfArgs,
+		cronExpr:    *cronExpr,
+		Gurl:        &g,
+		work:        make(chan struct{}, 1000),
+		messageChan: gurlib.MessageChanNew(),
 	}
 
 	if len(*cronExpr) > 0 {
