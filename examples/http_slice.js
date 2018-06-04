@@ -13,7 +13,7 @@ if (!flag.hasOwnProperty("f")) {
 }
 
 function getSuffix(audioName) {
-    var pos = flag.f.lastIndexOf(".")
+    var pos = audioName.lastIndexOf(".")
     var suffix = "";
     if (pos != -1) {
         return audioName.substring(pos + 1, audioName.length);
@@ -72,7 +72,7 @@ slice_one = function(fname, step, time){
             end = l;
         }
 
-        console.log("<" + sessionId + ">","i = ", i, "end = ", end);
+        //console.log("<" + sessionId + ">","i = ", i, "end = ", end);
         var rsp = http.send({
             H : [
                 config.H[0],
@@ -142,6 +142,12 @@ if (flag.hasOwnProperty("p") && flag.p.length > 0) {
     try {
         var suffix = getSuffix(file);
         var setp = getSetp(suffix);
+
+	if (file.trim().length == 0) {
+		console.log("audio file is empty");
+		gurl_exit(1);
+	}
+
         slice_one(file, setp, "250ms")
     } catch(e) {
         console.log("call slice_one fail " + e);
