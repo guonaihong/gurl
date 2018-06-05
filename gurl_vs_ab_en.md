@@ -1,12 +1,13 @@
-#### 简介
-gurl -bench 模式与ab命令横向对比评测
+#### Introduction
+"Gurl-bench" mode and "ab" command horizontal comparison evaluation.
 
 #### Documentation
-* [English](./gurl_vs_ab_en.md)
+* [English](./gurl_vs_ab.md)
 
-* 准备
+* Ready
 ``` bash
-# 起动gurl自带http echo服务
+# Start the "http echo" echo service provided by gurl
+
 gurl -echo :12345
 ```
 * gurl
@@ -114,6 +115,6 @@ Percentage of the requests served within a certain time (ms)
  100%    212 (longest request)
 ```
 
-* 结论  
-gurl 每秒可以发的消息数(12w/s)比ab(3w/s)命令多太数。核心数越多，gurl比ab的性能就越高。
-gurl比ab快的秘密，ab只用了单个线程压测，特别依赖cpu主频，主频快的cpu跑得才快。
+* In conclusion
+  
+The gurl command can send more messages per second (12w/s) than the ab(3w/s) command. The more cores, the higher the performance of "gurl" than "ab".The reason "gurl" is faster than "ab" is that ab only uses a single thread for pressure testing, and is particularly dependent on the cpu clock speed. The fast clock speed runs faster.
