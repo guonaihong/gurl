@@ -7,11 +7,14 @@ import (
 	"github.com/robfig/cron"
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"runtime"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -59,7 +62,8 @@ func (cmd *GurlCmd) Cron(client *http.Client) {
 			return
 		}
 
-		cmd.Send()
+		_, err := cmd.Send()
+		CmdErr(err)
 	})
 
 	cron.Run()
@@ -148,6 +152,25 @@ func (cmd *GurlCmd) benchMain() {
 	os.Exit(0)
 }
 
+func CmdErr(err error) {
+	if err == nil {
+		return
+	}
+
+	if uerr, ok := err.(*url.Error); ok {
+		if noerr, ok := uerr.Err.(*net.OpError); ok {
+			if scerr, ok := noerr.Err.(*os.SyscallError); ok {
+				if scerr.Err == syscall.ECONNREFUSED {
+					fmt.Printf("gurl: (7) couldn't connect to host\n")
+					os.Exit(7)
+				}
+			}
+		}
+	}
+
+	fmt.Printf("%s\n", err)
+}
+
 func (cmd *GurlCmd) main() {
 
 	c := cmd.c
@@ -168,7 +191,8 @@ func (cmd *GurlCmd) main() {
 		go func() {
 			defer wg.Done()
 			for range work {
-				g.Send()
+				_, err := g.Send()
+				CmdErr(err)
 			}
 		}()
 	}
