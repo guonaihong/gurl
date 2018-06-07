@@ -1,5 +1,4 @@
 # gurl
-
 #### Documentation
 * [English](./README_EN.md)
 
@@ -190,6 +189,69 @@ env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
      100%    14
 
  ```
+#### 高级用法
+高级用法主要讲如何使用gurl内置的js函数，以下代码都可以通过-K 选项执行，-karg "这里是从给脚本的命令行参数"
+* 在配置文件里面解析命令行配置
+```javascript
+    var program = gurl_flag();
+    var flag = program
+        .option("f, file", "", "pcm file")
+        .option("url", "", "http url")
+        .option("ak, appkey", "", "appkey")
+        .option("p", "", "open consumer mode")
+        .parse()
+
+    if (!flag.hasOwnProperty("f")) {
+        flag.Usage()
+        gurl_exit(0)
+    }   
+
+    console.log("appkey:", flag.appkey, 
+               "f:", flag.f, 
+               "file:", flag.file,
+               "p:", flag.p)
+    //运行
+    //gurl -K demo.js -kargs "-appkey 12345"
+```
+* 退出当前进程
+```
+    gurl_exit(arg)//其中的arg是整数，类似shell里面的exit arg
+```
+* 发送http请求
+```
+    var http = gurl_http();
+    var rsp = http.send({
+        H : [ 
+            config.H[0],
+            "X-Number:" + xnumber,
+            "session-id:" + sessionId,
+        ],  
+
+        MF : [ 
+            "voice=" + all.slice(i, end),
+        ],  
+        url : config.url
+    }); 
+
+    if (rsp.err != "") {
+        console.log("rsp error is " + rsp.err);
+        return
+    }   
+
+    if (rsp.status_code === 200) {
+        gurl_fjson(rsp.body)
+    } else {
+        console.log("error http code", rsp.status_code)
+    }   
+
+
+```
+
+* sleep
+```
+    gurl_sleep("250ms");
+    gurl_sleep("1s");
+```
 #### TODO
 * bugfix
 * 一些用着很顺手的功能添加

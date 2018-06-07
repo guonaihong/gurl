@@ -2,7 +2,7 @@
 gurl -bench 模式与ab命令横向对比评测
 
 #### Documentation
-* [English](./gurl_vs_ab_en.md)
+* [Chinese](./gurl_vs_ab_en.md)
 
 * 准备
 ``` bash
