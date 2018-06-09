@@ -214,11 +214,11 @@ env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
     //gurl -K demo.js -kargs "-appkey 12345"
 ```
 * 退出当前进程
-```
+```javascript
     gurl_exit(arg)//其中的arg是整数，类似shell里面的exit arg
 ```
 * 发送http请求
-```
+```javascript
     var http = gurl_http();
     var rsp = http.send({
         H : [ 
@@ -248,7 +248,7 @@ env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
 ```
 
 * sleep
-```
+```javascript
     gurl_sleep("250ms");
     gurl_sleep("1s");
 ```

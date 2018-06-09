@@ -2,7 +2,7 @@
 "Gurl-bench" mode and "ab" command horizontal comparison evaluation.
 
 #### Documentation
-* [English](./gurl_vs_ab.md)
+* [Chinese](./gurl_vs_ab.md)
 
 * Ready
 ``` bash

@@ -102,14 +102,27 @@ func (cmd *GurlCmd) Producer() {
 		}
 
 		vmProducer.VM.Set("gurl_args", pconf+" "+pConfArgs)
-		for i := 0; i < n; i++ {
+
+		if cmd.n >= 0 {
+			for i := 0; i < n; i++ {
+				_, err := vmProducer.VM.Run(producer)
+				if err != nil {
+					fmt.Printf("%s\n", err)
+					os.Exit(1)
+				}
+			}
+			close(cmd.messageChan.P)
+			return
+		}
+
+		for {
 			_, err := vmProducer.VM.Run(producer)
 			if err != nil {
 				fmt.Printf("%s\n", err)
 				os.Exit(1)
 			}
 		}
-		close(cmd.messageChan.P)
+
 	}()
 }
 
