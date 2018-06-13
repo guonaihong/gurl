@@ -251,7 +251,7 @@ func (f *GurlFlag) Option(call otto.FunctionCall) otto.Value {
 
 	if f.set == false {
 		if original, err := f.js.VM.Get("gurl_args"); err == nil {
-			cmd := strings.Split(original.String(), " ")
+			cmd := strings.Fields(original.String())
 			f.cmd = cmd
 		}
 
