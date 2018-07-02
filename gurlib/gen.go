@@ -13,7 +13,13 @@ import (
 
 func Cmd2Js(g *Gurl) {
 	buf := bytes.Buffer{}
+	buf.WriteString(`
+var program = gurl_flag();
+var flag = program
+	.option("url", "", "Remote service address")
+	.parse()
 
+`)
 	buf.WriteString("var cmd = ")
 
 	all, err := json.MarshalIndent(&g.GurlCore, "", "    ")
@@ -24,8 +30,15 @@ func Cmd2Js(g *Gurl) {
 
 	buf.Write(all)
 	buf.WriteString(";\n")
-	buf.WriteString("var rsp = gurl_send(cmd);\n")
-	buf.WriteString("console.log(rsp.body);\n")
+	buf.WriteString(`
+if (flag.url.length > 0) {
+	cmd.url = flag.url
+}
+
+var http = gurl_http();
+var rsp  = http.send(cmd);
+console.log(rsp.body);
+`)
 	io.Copy(os.Stdout, &buf)
 }
 
