@@ -379,6 +379,7 @@ func main() {
 	verbose := flag.Bool("v, verbose", false, "Make the operation more talkative")
 	agent := flag.String("A, user-agent", "gurl", "Send User-Agent STRING to server")
 
+	flag.Author("guonaihong https://github.com/guonaihong/gurl")
 	flag.Parse()
 
 	if *echo != "" {

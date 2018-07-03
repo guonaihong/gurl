@@ -129,17 +129,31 @@ env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
 
   ```js
   ./gurl -X POST -F mode=A -F text=good -F voice=@./good.opus -url http://127.0.0.1:24909/eval/opus -gen &>demo.cf.js 
-  var cmd = {
-      "method": "POST",
-      "F": [
-          "mode=A",
-          "text=good",
-          "voice=@./good.opus"
-      ],
-      "url": "http://127.0.0.1:24909/eval/opus"
-  };
-  var rsp = gurl_send(cmd);
-  console.log(rsp.body);
+    var program = gurl_flag();
+    var flag = program
+        .option("url", "", "Remote service address")
+        .parse()
+
+    var cmd = {
+        "method": "POST",
+        "F": [
+            "mode=A",
+            "text=good",
+            "voice=@./good.opus"
+        ],
+        "url": "http://127.0.0.1:24909/eval/opus",
+        "o": "stdout",
+        "Flag": 0,
+        "A": "gurl"
+    };
+
+    if (flag.url.length > 0) {
+        cmd.url = flag.url;
+    }
+
+    var http = gurl_http();
+    var rsp  = http.send(cmd);
+    console.log(rsp.body);
   ```
   * Turn the configuration file into a command line (option -gen -K configuration file)
   ```bash

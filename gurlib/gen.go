@@ -32,7 +32,7 @@ var flag = program
 	buf.WriteString(";\n")
 	buf.WriteString(`
 if (flag.url.length > 0) {
-	cmd.url = flag.url
+	cmd.url = flag.url;
 }
 
 var http = gurl_http();
