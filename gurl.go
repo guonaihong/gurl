@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"github.com/guonaihong/flag"
 	"github.com/guonaihong/gurl/gurlib"
-	"github.com/robfig/cron"
+	"github.com/yuin/gopher-lua"
 	"io"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -23,24 +24,22 @@ const (
 )
 
 type GurlCmd struct {
-	c           int
-	n           int
-	conf        string
-	confArgs    string
-	cronExpr    string
-	pconf       string
-	pConfArgs   string
-	work        chan struct{}
-	wg          sync.WaitGroup
-	messageChan *gurlib.MessageChan
+	c        int
+	n        int
+	conf     string
+	KArgs    string
+	cronExpr string
+	work     chan struct{}
+	wg       sync.WaitGroup
 	*gurlib.Gurl
 }
 
+/*
 func (cmd *GurlCmd) Cron(client *http.Client) {
 	cron := cron.New()
 	conf := cmd.conf
 	cronExpr := cmd.cronExpr
-	confArgs := cmd.confArgs
+	kargs := cmd.kargs
 
 	defer cron.Stop()
 
@@ -57,7 +56,7 @@ func (cmd *GurlCmd) Cron(client *http.Client) {
 				os.Exit(1)
 			}
 
-			js.VM.Set("gurl_args", conf+""+confArgs)
+			js.VM.Set("gurl_args", conf+""+kargs)
 			js.VM.Run(string(all))
 			return
 		}
@@ -68,60 +67,27 @@ func (cmd *GurlCmd) Cron(client *http.Client) {
 
 	cron.Run()
 }
+*/
 
 func (cmd *GurlCmd) Producer() {
 	work, n := cmd.work, cmd.n
-	pconf, pConfArgs := cmd.pconf, cmd.pConfArgs
-	g := cmd.Gurl
 
 	go func() {
 
-		if len(pconf) == 0 {
-			defer close(work)
-			if cmd.n >= 0 {
+		defer close(work)
+		if cmd.n >= 0 {
 
-				for i := 0; i < n; i++ {
-					work <- struct{}{}
-				}
-
-				return
-			}
-
-			for {
+			for i := 0; i < n; i++ {
 				work <- struct{}{}
 			}
-			return
-		}
 
-		vmProducer := gurlib.NewJsEngine(g.Client)
-		vmProducer.SetMessage(gurlib.MessageNew(cmd.messageChan))
-		producer, err := ioutil.ReadFile(pconf)
-		if err != nil {
-			fmt.Printf("%s\n", err)
-			os.Exit(1)
-		}
-
-		vmProducer.VM.Set("gurl_args", pconf+" "+pConfArgs)
-
-		if cmd.n >= 0 {
-			for i := 0; i < n; i++ {
-				_, err := vmProducer.VM.Run(producer)
-				if err != nil {
-					fmt.Printf("%s\n", err)
-					os.Exit(1)
-				}
-			}
-			close(cmd.messageChan.P)
 			return
 		}
 
 		for {
-			_, err := vmProducer.VM.Run(producer)
-			if err != nil {
-				fmt.Printf("%s\n", err)
-				os.Exit(1)
-			}
+			work <- struct{}{}
 		}
+		return
 
 	}()
 }
@@ -251,73 +217,6 @@ func jsConfBenchMain(c, n int, url string,
 }
 */
 
-func (cmd *GurlCmd) jsConfMain() {
-
-	c, wg, work := cmd.c, &cmd.wg, cmd.work
-	conf, confArgs := cmd.conf, cmd.confArgs
-	pconf := cmd.pconf
-	g := cmd.Gurl
-
-	defer func() {
-		wg.Wait()
-		os.Exit(0)
-	}()
-
-	all, err := ioutil.ReadFile(conf)
-	if err != nil {
-		os.Exit(1)
-	}
-
-	for i := 0; i < c; i++ {
-		wg.Add(1)
-
-		go func() {
-			js := gurlib.NewJsEngine(g.Client)
-			js.SetMessage(gurlib.MessageNew(cmd.messageChan))
-
-			js.VM.Set("gurl_args", conf+" "+confArgs)
-			if len(g.Url) > 0 {
-				js.VM.Set("gurl_url", g.Url)
-			}
-
-			defer wg.Done()
-
-			for {
-				select {
-				case _, ok := <-work:
-					if !ok {
-						if len(pconf) == 0 {
-							return
-						}
-						continue
-					}
-
-					_, err := js.VM.Run(string(all))
-					if err != nil {
-						fmt.Printf("%s\n", err)
-						os.Exit(1)
-					}
-
-				case m, ok := <-cmd.messageChan.P:
-
-					if !ok {
-						return
-					}
-
-					cmd.messageChan.C <- m
-					_, err := js.VM.Run(all)
-
-					if err != nil {
-						fmt.Printf("%s\n", err)
-						os.Exit(1)
-					}
-				}
-			}
-		}()
-	}
-
-}
-
 func httpEcho(addr string) {
 
 	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
@@ -353,43 +252,98 @@ func toFlag(output, str string) (flag int) {
 	return flag
 }
 
-func main() {
+func (cmd *GurlCmd) LuaMain(message gurlib.Message) {
 
-	headers := flag.StringSlice("H, header", []string{}, "Pass custom header LINE to server (H)")
-	forms := flag.StringSlice("F, form", []string{}, "Specify HTTP multipart POST data (H)")
-	jfa := flag.StringSlice("Jfa", []string{}, "Specify HTTP multipart POST json data (H)")
-	cronExpr := flag.String("cron", "", "Cron expression")
-	conf := flag.String("K, config", "", "Read js config from FILE")
-	confArgs := flag.String("kargs", "", "Command line parameters passed to the configuration file")
-	pconf := flag.String("pk, pconfig", "", "Producer profile")
-	pConfArgs := flag.String("pkargs", "", "Producer profile command line parameters")
-	output := flag.String("o, output", "stdout", "Write to FILE instead of stdout")
-	oflag := flag.String("oflag", "", "Control the way you write(append|line|trunc)")
-	method := flag.String("X, request", "", "Specify request command to use")
-	gen := flag.Bool("gen", false, "Generate the default js configuration file")
-	toJson := flag.StringSlice("J", []string{}, `Turn key:value into {"key": "value"})`)
-	url := flag.String("url", "", "Specify a URL to fetch")
-	an := flag.Int("an", 1, "Number of requests to perform")
-	ac := flag.Int("ac", 1, "Number of multiple requests to make")
-	bench := flag.Bool("bench", false, "Run benchmarks test")
-	conns := flag.Int("conns", DefaultConnections, "Max open idle connections per target host")
-	cpus := flag.Int("cpus", 0, "Number of CPUs to use")
-	echo := flag.String("echo", "", "HTTP echo server")
-	data := flag.String("d, data", "", "HTTP POST data")
-	verbose := flag.Bool("v, verbose", false, "Make the operation more talkative")
-	agent := flag.String("A, user-agent", "gurl", "Send User-Agent STRING to server")
+	conf := cmd.conf
+	kargs := cmd.KArgs
+	all, err := ioutil.ReadFile(conf)
+	if err != nil {
+		fmt.Printf("ERROR:%s\n", err)
+		os.Exit(1)
+	}
 
-	flag.Author("guonaihong https://github.com/guonaihong/gurl")
-	flag.Parse()
+	wg := sync.WaitGroup{}
+
+	work := make(chan struct{}, 1000)
+
+	wg.Add(1)
+
+	c := cmd.c
+	for i := 0; i < c; i++ {
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			defer func() {
+				//message.Quit <- lua.LTrue
+				//fmt.Printf("close out:%v, close quit:%v\n", message.Out, message.Quit)
+				close(message.Out)
+				//close(message.Quit)
+			}()
+
+			l := gurlib.NewLuaEngine()
+			l.L.SetGlobal("conn_cmd", lua.LString(kargs))
+			l.L.SetGlobal("in_ch", lua.LChannel(message.In))
+			l.L.SetGlobal("out_ch", lua.LChannel(message.Out))
+
+			for {
+				if cmd.n != 0 {
+					select {
+					case _, ok := <-work:
+						if !ok {
+							return
+						}
+					}
+				}
+
+				err = l.L.DoString(string(all))
+				if err != nil {
+					fmt.Printf("%s\n", err)
+					os.Exit(1)
+				}
+			}
+		}()
+	}
+
+	wg.Wait()
+}
+func gurlMain(message gurlib.Message, argv0 string, argv []string) {
+	commandlLine := flag.NewFlagSet(argv0, flag.ExitOnError)
+
+	headers := commandlLine.StringSlice("H, header", []string{}, "Pass custom header LINE to server (H)")
+	forms := commandlLine.StringSlice("F, form", []string{}, "Specify HTTP multipart POST data (H)")
+	jfa := commandlLine.StringSlice("Jfa", []string{}, "Specify HTTP multipart POST json data (H)")
+	cronExpr := commandlLine.String("cron", "", "Cron expression")
+	conf := commandlLine.String("K, config", "", "Read js config from FILE")
+	kargs := commandlLine.String("kargs", "", "Command line parameters passed to the configuration file")
+	output := commandlLine.String("o, output", "stdout", "Write to FILE instead of stdout")
+	oflag := commandlLine.String("oflag", "", "Control the way you write(append|line|trunc)")
+	method := commandlLine.String("X, request", "", "Specify request command to use")
+	gen := commandlLine.Bool("gen", false, "Generate the default js configuration file")
+	toJson := commandlLine.StringSlice("J", []string{}, `Turn key:value into {"key": "value"})`)
+	url := commandlLine.String("url", "", "Specify a URL to fetch")
+	an := commandlLine.Int("an", 1, "Number of requests to perform")
+	ac := commandlLine.Int("ac", 1, "Number of multiple requests to make")
+	bench := commandlLine.Bool("bench", false, "Run benchmarks test")
+	conns := commandlLine.Int("conns", DefaultConnections, "Max open idle connections per target host")
+	cpus := commandlLine.Int("cpus", 0, "Number of CPUs to use")
+	echo := commandlLine.String("echo", "", "HTTP echo server")
+	data := commandlLine.String("d, data", "", "HTTP POST data")
+	verbose := commandlLine.Bool("v, verbose", false, "Make the operation more talkative")
+	agent := commandlLine.String("A, user-agent", "gurl", "Send User-Agent STRING to server")
+
+	commandlLine.Author("guonaihong https://github.com/guonaihong/gurl")
+	commandlLine.Parse(argv)
 
 	if *echo != "" {
 		httpEcho(*echo)
+		return
 	}
 
-	as := flag.Args()
+	as := commandlLine.Args()
 	Url := *url
 	if *url == "" && len(as) == 0 && len(*conf) == 0 && !*gen && !*bench {
-		flag.Usage()
+		commandlLine.Usage()
 		return
 	}
 
@@ -444,27 +398,24 @@ func main() {
 	}
 
 	cmd := GurlCmd{
-		c:           *ac,
-		n:           *an,
-		conf:        *conf,
-		confArgs:    *confArgs,
-		pconf:       *pconf,
-		pConfArgs:   *pConfArgs,
-		cronExpr:    *cronExpr,
-		Gurl:        &g,
-		work:        make(chan struct{}, 1000),
-		messageChan: gurlib.MessageChanNew(),
+		c:        *ac,
+		n:        *an,
+		conf:     *conf,
+		KArgs:    *kargs,
+		cronExpr: *cronExpr,
+		Gurl:     &g,
+		work:     make(chan struct{}, 1000),
 	}
 
 	if len(*cronExpr) > 0 {
-		cmd.Cron(&client)
+		//cmd.Cron(&client)
 	}
 
 	cmd.Producer()
 
 	if len(*conf) > 0 {
 		g.O = ""
-		cmd.jsConfMain()
+		cmd.LuaMain(message)
 
 		if *bench {
 			//TODO
@@ -477,4 +428,63 @@ func main() {
 	}
 
 	cmd.main()
+}
+
+type Chan struct {
+	ch   chan lua.LValue
+	quit chan lua.LValue
+}
+
+func main() {
+
+	var wg sync.WaitGroup
+	var cmds [][]string
+
+	prevPos := 1
+	for k, v := range os.Args[1:] {
+		if v == "|" {
+			cmds = append(cmds, os.Args[prevPos:k+1])
+			prevPos = k + 2
+		}
+	}
+
+	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
+
+	if len(cmds) == 0 {
+		cmds = [][]string{os.Args[1:]}
+	}
+
+	if prevPos != 1 && prevPos < len(os.Args) {
+		cmds = append(cmds, os.Args[prevPos:])
+	}
+
+	wg.Add(len(cmds))
+
+	var channel []*Chan
+
+	for k, v := range cmds {
+		channel = append(channel, &Chan{
+			quit: make(chan lua.LValue, 2),
+			ch:   make(chan lua.LValue, 1000),
+		})
+
+		go func(ch []*Chan, k int, v []string) {
+			defer func() {
+				wg.Done()
+			}()
+
+			m := gurlib.Message{
+				Out: ch[k].ch,
+			}
+
+			if k > 0 {
+				m.In = ch[k-1].ch
+			}
+
+			//fmt.Printf("k=%d, %#v\n", k, m)
+			gurlMain(m, os.Args[0], v)
+		}(channel, k, v)
+	}
+
+	wg.Wait()
 }

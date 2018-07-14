@@ -212,7 +212,7 @@ func jsonFromAppend(JF []string, fm *[]FormVal) {
 	*fm = append(*fm, formVals...)
 }
 
-func parseBody(Body *[]byte) {
+func ParseBody(Body *[]byte) {
 	if bytes.HasPrefix(*Body, []byte("@")) {
 		body, err := ioutil.ReadFile(string((*Body)[1:]))
 		if err != nil {
@@ -227,7 +227,7 @@ func parseBody(Body *[]byte) {
 func (g *GurlCore) MemInit() {
 
 	if len(g.Body) > 0 {
-		parseBody(&g.Body)
+		ParseBody(&g.Body)
 	}
 
 	if len(g.J) > 0 {
