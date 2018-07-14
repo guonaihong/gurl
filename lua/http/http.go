@@ -2,9 +2,14 @@ package http
 
 import (
 	"github.com/guonaihong/gurl/gurlib"
+	"github.com/guonaihong/gurl/gurlib/url"
 	"github.com/yuin/gopher-lua"
 	"net/http"
 )
+
+type HTTP struct {
+	*http.Client
+}
 
 func New(client *http.Client) *HTTP {
 	h := &HTTP{}
@@ -14,37 +19,37 @@ func New(client *http.Client) *HTTP {
 
 func (h *HTTP) send(L *lua.LState) int {
 
+	g := gurlib.Gurl{}
 	reqArgs := L.ToTable(1)
 
-	h := regArgs.RawGet(lua.LString("H"))
+	header := reqArgs.RawGet(lua.LString("H"))
 	mf := reqArgs.RawGet(lua.LString("MF"))
-	url := reqArgs.RawGet(lua.LString("url"))
+	urlStr := reqArgs.RawGet(lua.LString("url"))
 	o := reqArgs.RawGet(lua.LString("o"))
 	method := reqArgs.RawGet(lua.LString("X"))
 	body := reqArgs.RawGet(lua.LString("body"))
 
-	switch reqUrl := url.(type) {
+	switch reqUrl := urlStr.(type) {
 	case lua.LString:
-		url = ModifyUrl(url)
-		g.Url = url
+		g.Url = url.ModifyUrl(reqUrl.String())
 	}
 
 	switch reqMethod := method.(type) {
 	case lua.LString:
-		g.Method = reqMethod
+		g.Method = reqMethod.String()
 	}
 
 	switch reqO := o.(type) {
 	case lua.LString:
-		g.O = reqO
+		g.O = reqO.String()
 	}
 
 	switch reqBody := body.(type) {
 	case lua.LString:
-		g.Body = []byte(body)
+		g.Body = []byte(reqBody.String())
 	}
 
-	switch reqH := h.(type) {
+	switch reqH := header.(type) {
 	case *lua.LTable:
 		var gH []string
 		reqH.ForEach(func(_ lua.LValue, value lua.LValue) {
@@ -53,20 +58,19 @@ func (h *HTTP) send(L *lua.LState) int {
 		g.H = gH
 	}
 
-	switch reqMF := h.(type) {
+	switch reqMF := mf.(type) {
 	case *lua.LTable:
 		var gMF []string
 		reqMF.ForEach(func(_ lua.LValue, value lua.LValue) {
 			gMF = append(gMF, value.String())
 		})
 	}
-	g := gurlib.Gurl{}
 
 	g.MemInit()
 
-	rsp, _ := g.sendExec(h.Client)
+	rsp, _ := g.SendExec(h.Client)
 
-	tb := L.CreateTable(0, len(m))
+	tb := L.CreateTable(0, 3)
 
 	tb.RawSetH(lua.LString("status_code"), lua.LNumber(rsp.StatusCode))
 	tb.RawSetH(lua.LString("body"), lua.LString(rsp.Body))
@@ -81,7 +85,7 @@ func (h *HTTP) Loader(L *lua.LState) int {
 		"send": h.send,
 	})
 
-	RegisterHTTPType(mod, L)
+	//RegisterHTTPType(mod, L)
 	L.Push(mod)
 	return 1
 }

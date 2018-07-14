@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/guonaihong/flag"
 	"github.com/guonaihong/gurl/gurlib"
+	url2 "github.com/guonaihong/gurl/gurlib/url"
 	"github.com/yuin/gopher-lua"
 	"io"
 	"io/ioutil"
@@ -281,7 +282,7 @@ func (cmd *GurlCmd) LuaMain(message gurlib.Message) {
 				//close(message.Quit)
 			}()
 
-			l := gurlib.NewLuaEngine()
+			l := NewLuaEngine(cmd.Client)
 			l.L.SetGlobal("conn_cmd", lua.LString(kargs))
 			l.L.SetGlobal("in_ch", lua.LChannel(message.In))
 			l.L.SetGlobal("out_ch", lua.LChannel(message.Out))
@@ -321,7 +322,7 @@ func gurlMain(message gurlib.Message, argv0 string, argv []string) {
 	method := commandlLine.String("X, request", "", "Specify request command to use")
 	gen := commandlLine.Bool("gen", false, "Generate the default js configuration file")
 	toJson := commandlLine.StringSlice("J", []string{}, `Turn key:value into {"key": "value"})`)
-	url := commandlLine.String("url", "", "Specify a URL to fetch")
+	URL := commandlLine.String("url", "", "Specify a URL to fetch")
 	an := commandlLine.Int("an", 1, "Number of requests to perform")
 	ac := commandlLine.Int("ac", 1, "Number of multiple requests to make")
 	bench := commandlLine.Bool("bench", false, "Run benchmarks test")
@@ -341,8 +342,8 @@ func gurlMain(message gurlib.Message, argv0 string, argv []string) {
 	}
 
 	as := commandlLine.Args()
-	Url := *url
-	if *url == "" && len(as) == 0 && len(*conf) == 0 && !*gen && !*bench {
+	Url := *URL
+	if *URL == "" && len(as) == 0 && len(*conf) == 0 && !*gen && !*bench {
 		commandlLine.Usage()
 		return
 	}
@@ -358,7 +359,7 @@ func gurlMain(message gurlib.Message, argv0 string, argv []string) {
 		}
 	}
 
-	Url = gurlib.ModifyUrl(Url)
+	Url = url2.ModifyUrl(Url)
 
 	if *cpus > 0 {
 		runtime.GOMAXPROCS(*cpus)
@@ -389,11 +390,11 @@ func gurlMain(message gurlib.Message, argv0 string, argv []string) {
 
 	if *gen {
 		if len(*conf) > 0 {
-			gurlib.Js2Cmd(*conf)
+			gurlib.Lua2Cmd(*conf)
 			return
 		}
 
-		gurlib.Cmd2Js(&g)
+		gurlib.Cmd2Lua(&g)
 		return
 	}
 
