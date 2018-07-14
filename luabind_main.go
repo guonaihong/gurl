@@ -1,9 +1,10 @@
 package main
 
 import (
-	"github.com/guonaihong/conn/lua/cmdparse"
-	"github.com/guonaihong/conn/lua/socket"
+	"github.com/guonaihong/gurl/lua/cmdparse"
 	myhttp "github.com/guonaihong/gurl/lua/http"
+	"github.com/guonaihong/gurl/lua/time"
+	"github.com/guonaihong/gurl/lua/uuid"
 	"github.com/yuin/gopher-lua"
 	"net/http"
 )
@@ -15,9 +16,10 @@ type LuaEngine struct {
 func NewLuaEngine(client *http.Client) *LuaEngine {
 	L := lua.NewState()
 	engine := &LuaEngine{L: L}
-	L.PreloadModule("socket", socket.Loader)
 	L.PreloadModule("cmd", cmdparse.Loader)
 	L.PreloadModule("http", myhttp.New(client).Loader)
+	L.PreloadModule("uuid", uuid.Loader)
+	L.PreloadModule("time", time.Loader)
 	//socket.RegisterSocketType(L)
 	return engine
 }
