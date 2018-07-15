@@ -60,7 +60,7 @@ function send_asr(config)
             print("error http code".. rsp["status_code"])
         end
 
-        --time.sleep(config.time, "ms")
+        time.sleep(config.time, "ms")
         xnumber = xnumber+1
     end
 

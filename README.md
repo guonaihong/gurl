@@ -122,34 +122,10 @@ env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
     小提示: -oflag 后面的命令可以组合使用 "append|line"的意思是：把服务端的输出追加到某个文本中，并用'\n'分隔符
  * 配置文件
    * 从命令行的数据生成配置文件(选项 -gen)
-  ```js
+  ```lua
   ./gurl -X POST -F mode=A -F text=good -F voice=@./good.opus -url http://127.0.0.1:24909/eval/opus -gen &>demo.cf.js 
 
-    var program = gurl_flag();
-    var flag = program
-        .option("url", "", "Remote service address")
-        .parse()
-
-    var cmd = {
-        "method": "POST",
-        "F": [
-            "mode=A",
-            "text=good",
-            "voice=@./good.opus"
-        ],
-        "url": "http://127.0.0.1:24909/eval/opus",
-        "o": "stdout",
-        "Flag": 0,
-        "A": "gurl"
-    };
-
-    if (flag.url.length > 0) {
-        cmd.url = flag.url;
-    }
-
-    var http = gurl_http();
-    var rsp  = http.send(cmd);
-    console.log(rsp.body);
+  #todo
 
   ```
   * 把配置文件转成命令行形式(选项-gen -K 配置文件)
@@ -208,65 +184,73 @@ env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
 #### 高级用法
 高级用法主要讲如何使用gurl内置的js函数，以下代码都可以通过-K 选项执行，-karg "这里是从给脚本的命令行参数"
 * 在配置文件里面解析命令行配置
-```javascript
-    var program = gurl_flag();
-    var flag = program
-        .option("f, file", "", "pcm file")
-        .option("url", "", "http url")
-        .option("ak, appkey", "", "appkey")
-        .option("p", "", "open consumer mode")
-        .parse()
+```lua
+    local cmd = require("cmd")
+    local flag = cmd.new()
+    local opt = flag
+            :opt_str("f, file", "", "open audio file")
+            :opt_str("a, addr", "", "Remote service address")
+            :parse("-f ./tst.pcm -a 127.0.0.1:8080")
 
-    if (!flag.hasOwnProperty("f")) {
-        flag.Usage()
-        gurl_exit(0)
-    }   
+    function tableHasKey(table, key)
+        return table[key] ~= nil 
+    end
 
-    console.log("appkey:", flag.appkey, 
-               "f:", flag.f, 
-               "file:", flag.file,
-               "p:", flag.p)
-    //运行
-    //gurl -K demo.js -kargs "-appkey 12345"
-```
-* 退出当前进程
-```javascript
-    gurl_exit(arg)//其中的arg是整数，类似shell里面的exit arg
+    if (not tableHasKey(opt, "f")) or
+        (not tableHasKey(opt, "file")) or
+        (not tableHasKey(opt, "a")) or
+        (not tableHasKey(opt, "addr")) then
+
+        opt.Usage()
+
+        return
+    end
+
+    for k, v in pairs(opt) do
+        print("cmd opt ("..k..") parse value ("..v..")")
+    end
+
 ```
 * 发送http请求
-```javascript
-    var http = gurl_http();
-    var rsp = http.send({
-        H : [ 
-            config.H[0],
-            "X-Number:" + xnumber,
-            "session-id:" + sessionId,
-        ],  
+```lua
+    local http = require("http")
+    local rsp = http.send({
+        H = { 
+            "appkey:"..config.appkey,
+            "X-Number:"..xnumber,
+            "session-id:"..session_id,
+        },
+        MF = {
+            "voice=" .. bytes,
+        },
+        url = config.url
+    })
 
-        MF : [ 
-            "voice=" + all.slice(i, end),
-        ],  
-        url : config.url
-    }); 
-
-    if (rsp.err != "") {
-        console.log("rsp error is " + rsp.err);
+    --print("bytes ("..bytes..")")
+    if #rsp["err"] ~= 0 then
+        print("rsp error is ".. rsp["err"])
         return
-    }   
+    end
 
-    if (rsp.status_code === 200) {
-        gurl_fjson(rsp.body)
-    } else {
-        console.log("error http code", rsp.status_code)
-    }   
-
+    if rsp["status_code"] == 200 then
+        body = rsp["body"]
+        if #rsp["body"] == 0 then
+             body = "{}"
+        end
+        print(json.format(body))
+    else
+        print("error http code".. rsp["status_code"])
+    end
 
 ```
 
 * sleep
-```javascript
-    gurl_sleep("250ms");
-    gurl_sleep("1s");
+```lua
+    local time = require("time")
+    time.sleep(250, "ms")
+    time.sleep(1, "s")
+    time.sleep(1, "m")
+    time.sleep(1, "h")
 ```
 #### TODO
 * bugfix
