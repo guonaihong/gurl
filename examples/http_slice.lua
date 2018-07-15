@@ -27,8 +27,8 @@ function send_file(config)
             },
             MF = {
                 "voice=" .. bytes,
-            }
-            url = url
+            },
+            url = config.url
         })
 
         if #rsp["err"] == 0 then
@@ -43,7 +43,7 @@ function send_file(config)
         end
 
         time.sleep(config.time)
-        xnumber++
+        xnumber = xnumber+1
     end
 
     local rsp = http.send({
@@ -63,12 +63,16 @@ function send_file(config)
 
     print("rsp.err:"..rsp["err".."rsp.status_code"..rsp["status_code"]])
     if rsp["status_code"] == 200 then
-        print("[filename]"..fname.."<"session_id..">" +json.format(rsp["body"]))
+        print("[filename]"..fname.."<"..session_id..">" +json.format(rsp["body"]))
     end
 end
 
+file = flag["f"] or ""
+if #file ~= 0 then
+    file = flag["file"]
+end
 
-if #flag.file ~= 0 ;then
+if #file ~= 0 then
     send_asr({
     
     })
@@ -83,9 +87,9 @@ while not exit do
             exit = true
         else
             print("received:", v)
-            send_asr({
-            })
+            --send_asr({
+            --})
         end
-    end},
+    end}
     )
 end

@@ -265,11 +265,10 @@ func (cmd *GurlCmd) LuaMain(message gurlib.Message) {
 
 	wg := sync.WaitGroup{}
 
-	work := make(chan struct{}, 1000)
-
-	wg.Add(1)
+	work := cmd.work
 
 	c := cmd.c
+
 	for i := 0; i < c; i++ {
 
 		wg.Add(1)
@@ -308,6 +307,7 @@ func (cmd *GurlCmd) LuaMain(message gurlib.Message) {
 
 	wg.Wait()
 }
+
 func gurlMain(message gurlib.Message, argv0 string, argv []string) {
 	commandlLine := flag.NewFlagSet(argv0, flag.ExitOnError)
 
