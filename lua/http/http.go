@@ -1,6 +1,7 @@
 package http
 
 import (
+	_ "fmt"
 	"github.com/guonaihong/gurl/gurlib"
 	"github.com/guonaihong/gurl/gurlib/url"
 	"github.com/yuin/gopher-lua"
@@ -21,6 +22,12 @@ func (h *HTTP) send(L *lua.LState) int {
 
 	g := gurlib.Gurl{}
 	reqArgs := L.ToTable(1)
+
+	/*
+		reqArgs.ForEach(func(k lua.LValue, value lua.LValue) {
+			fmt.Printf("k:(%#v) #### v:%#v\n", k, value)
+		})
+	*/
 
 	header := reqArgs.RawGet(lua.LString("H"))
 	mf := reqArgs.RawGet(lua.LString("MF"))
@@ -60,15 +67,18 @@ func (h *HTTP) send(L *lua.LState) int {
 
 	switch reqMF := mf.(type) {
 	case *lua.LTable:
-		var gMF []string
 		reqMF.ForEach(func(_ lua.LValue, value lua.LValue) {
-			gMF = append(gMF, value.String())
+			gurlib.ParseMF(value.String(), &g.FormCache)
 		})
 	}
 
-	g.MemInit()
+	g.ParseInit()
 
-	rsp, _ := g.SendExec(h.Client)
+	rsp, err := g.SendExec(h.Client)
+	if err != nil {
+		L.ArgError(1, "http:send expected:"+err.Error())
+		return 0
+	}
 
 	tb := L.CreateTable(0, 3)
 

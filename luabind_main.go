@@ -4,6 +4,7 @@ import (
 	"github.com/guonaihong/gurl/lua/cmdparse"
 	myhttp "github.com/guonaihong/gurl/lua/http"
 	"github.com/guonaihong/gurl/lua/json"
+	"github.com/guonaihong/gurl/lua/strings"
 	"github.com/guonaihong/gurl/lua/time"
 	"github.com/guonaihong/gurl/lua/uuid"
 	"github.com/yuin/gopher-lua"
@@ -22,6 +23,7 @@ func NewLuaEngine(client *http.Client) *LuaEngine {
 	L.PreloadModule("uuid", uuid.Loader)
 	L.PreloadModule("time", time.Loader)
 	L.PreloadModule("json", json.Loader)
+	L.PreloadModule("strings", strings.Loader)
 	//socket.RegisterSocketType(L)
 	return engine
 }

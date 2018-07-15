@@ -102,7 +102,7 @@ func (cmd *GurlCmd) benchMain() {
 	work := cmd.work
 	wg := &cmd.wg
 
-	g.MemInit()
+	g.ParseInit()
 	report := gurlib.NewReport(c, n, url)
 
 	for i := 0; i < c; i++ {
@@ -163,7 +163,7 @@ func (cmd *GurlCmd) main() {
 		os.Exit(0)
 	}()
 
-	g.MemInit()
+	g.ParseInit()
 	for i := 0; i < c; i++ {
 
 		wg.Add(1)
@@ -269,16 +269,14 @@ func (cmd *GurlCmd) LuaMain(message gurlib.Message) {
 
 	c := cmd.c
 
+	defer wg.Wait()
 	for i := 0; i < c; i++ {
 
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			defer func() {
-				//message.Quit <- lua.LTrue
-				//fmt.Printf("close out:%v, close quit:%v\n", message.Out, message.Quit)
 				close(message.Out)
-				//close(message.Quit)
 			}()
 
 			l := NewLuaEngine(cmd.Client)
@@ -298,14 +296,13 @@ func (cmd *GurlCmd) LuaMain(message gurlib.Message) {
 
 				err = l.L.DoString(string(all))
 				if err != nil {
-					fmt.Printf("%s\n", err)
+					fmt.Printf("run lua script fail:%s\n", err)
 					os.Exit(1)
 				}
 			}
 		}()
 	}
 
-	wg.Wait()
 }
 
 func gurlMain(message gurlib.Message, argv0 string, argv []string) {
@@ -421,6 +418,7 @@ func gurlMain(message gurlib.Message, argv0 string, argv []string) {
 		if *bench {
 			//TODO
 		}
+		return
 	}
 
 	if *bench {
@@ -459,9 +457,9 @@ func main() {
 		cmds = append(cmds, os.Args[prevPos:])
 	}
 
-	wg.Add(len(cmds))
-
 	var channel []*Chan
+	wg.Add(len(cmds))
+	defer wg.Wait()
 
 	for k, v := range cmds {
 		channel = append(channel, &Chan{
@@ -487,5 +485,4 @@ func main() {
 		}(channel, k, v)
 	}
 
-	wg.Wait()
 }

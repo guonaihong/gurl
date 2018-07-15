@@ -37,10 +37,11 @@ type GurlCore struct {
 
 	FormCache []FormVal `json:"-"`
 
-	Body []byte `json:"body,omitempty"`
-	Flag int
-	V    bool `json:"-"`
-	A    string
+	Body       []byte `json:"body,omitempty"`
+	Flag       int
+	V          bool `json:"-"`
+	A          string
+	NotParseAt bool
 }
 
 func parseVal(bodyJson map[string]interface{}, key, val string) {
@@ -130,7 +131,7 @@ func toJson(J []string, bodyJson map[string]interface{}) {
 	}
 }
 
-func form(F []string, fm *[]FormVal) {
+func (g *GurlCore) form(F []string, fm *[]FormVal) {
 
 	fileds := [2]string{}
 	formVals := []FormVal{}
@@ -146,7 +147,7 @@ func form(F []string, fm *[]FormVal) {
 
 		fileds[0], fileds[1] = v[:pos], v[pos+1:]
 
-		if strings.HasPrefix(fileds[1], "@") {
+		if !g.NotParseAt && strings.HasPrefix(fileds[1], "@") {
 			fname := fileds[1][1:]
 
 			fd, err := os.Open(fname)
@@ -224,7 +225,7 @@ func ParseBody(Body *[]byte) {
 	}
 }
 
-func (g *GurlCore) MemInit() {
+func (g *GurlCore) ParseInit() {
 
 	if len(g.Body) > 0 {
 		ParseBody(&g.Body)
@@ -244,14 +245,14 @@ func (g *GurlCore) MemInit() {
 		g.Body = body
 	}
 
-	g.FormCache = []FormVal{}
+	//g.FormCache = []FormVal{}
 
 	if len(g.Jfa) > 0 {
 		jsonFromAppend(g.Jfa, &g.FormCache)
 	}
 
 	if len(g.F) > 0 {
-		form(g.F, &g.FormCache)
+		g.form(g.F, &g.FormCache)
 	}
 }
 
@@ -519,7 +520,7 @@ func (g *GurlCore) sendExec(client *http.Client) (*Response, error) {
 	return g.GetOrBodyExec(client)
 }
 
-func parseMF(mf string, formCache *[]FormVal) {
+func ParseMF(mf string, formCache *[]FormVal) {
 	pos := strings.Index(mf, "=")
 	if pos == -1 {
 		return
@@ -569,12 +570,12 @@ func ExecSlice(cmd []string) (*Response, error) {
 		},
 	}
 
-	g.MemInit()
+	g.ParseInit()
 
 	formCache := []FormVal{}
 	for _, v := range *memForms {
 
-		parseMF(v, &formCache)
+		ParseMF(v, &formCache)
 	}
 
 	g.GurlCore.FormCache = append(g.GurlCore.FormCache, formCache...)

@@ -99,6 +99,8 @@ func parse(L *lua.LState) int {
 			for _, kv := range ks {
 				m[strings.TrimSpace(kv)] = v
 			}
+		} else {
+			m[strings.TrimSpace(k)] = v
 		}
 	}
 
