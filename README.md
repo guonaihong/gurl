@@ -18,9 +18,9 @@ gurl 是使用curl过程中的痛点改进。gurl实现了本人经常使用的c
 
 #### 推荐的使用流程
 1. 使用gurl命令行选项调通功能，很多用户经过这一步就完成了任务
-1. 如果命令行里面有难以记忆的部分，并且也需要经常使用它，可使用gurl -gen &>demo.cf.lua 命令保存到文件里
-2. gurl -K demo.cf.lua根据配置文件里面的数据访问服务端
-3. 如果要修改demo.cf.lua，也不熟悉配置文件的写法，可以通过./gurl -K demo.cf.lua -gen 命令把demo.cf.lua的数据转成命令行，然后重复第1步操作
+1. 如果命令行里面有难以记忆的部分，并且也需要经常使用它，可使用gurl -gen &>demo.lua 命令保存到文件里
+2. gurl -K demo.lua根据配置文件里面的数据访问服务端
+3. 如果要修改demo.lua，也不熟悉配置文件的写法，可以通过./gurl -K demo.lua -gen 命令把demo.lua的数据转成命令行，然后重复第1步操作
 
 #### install
 ```bash
@@ -175,18 +175,18 @@ env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
  * 配置文件
    * 从命令行的数据生成配置文件(选项 -gen)
   ```lua
-  ./gurl -X POST -F mode=A -F text=good -F voice=@./good.opus -url http://127.0.0.1:24909/eval/opus -gen &>demo.cf.js 
+  ./gurl -X POST -F mode=A -F text=good -F voice=@./good.opus -url http://127.0.0.1:24909/eval/opus -gen &>demo.lua 
 
   #todo
 
   ```
   * 把配置文件转成命令行形式(选项-gen -K 配置文件)
   ```bash
-  ./gurl -K demo.cf.js -gen
+  ./gurl -K demo.lua -gen
   gurl -X POST -F mode=A -F text=good -F voice=@./good.opus -url http://127.0.0.1:24909/eval/opus
   ```
 #### 高级用法
-高级用法主要讲如何使用gurl内置的js函数，以下代码都可以通过-K 选项执行，-karg "这里是从给脚本的命令行参数"
+高级用法主要讲如何使用gurl内置的lua函数，以下代码都可以通过-K 选项执行，-karg "这里是从给脚本的命令行参数"
 * 在配置文件里面解析命令行配置
 ```lua
     local cmd = require("cmd")

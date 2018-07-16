@@ -31,6 +31,7 @@ func (h *HTTP) send(L *lua.LState) int {
 
 	header := reqArgs.RawGet(lua.LString("H"))
 	mf := reqArgs.RawGet(lua.LString("MF"))
+	f := reqArgs.RawGet(lua.LString("F"))
 	urlStr := reqArgs.RawGet(lua.LString("url"))
 	o := reqArgs.RawGet(lua.LString("o"))
 	method := reqArgs.RawGet(lua.LString("X"))
@@ -72,6 +73,14 @@ func (h *HTTP) send(L *lua.LState) int {
 		})
 	}
 
+	switch reqF := f.(type) {
+	case *lua.LTable:
+		var fs []string
+		reqF.ForEach(func(_ lua.LValue, value lua.LValue) {
+			fs = append(fs, value.String())
+		})
+		g.F = fs
+	}
 	g.ParseInit()
 
 	rsp, err := g.SendExec(h.Client)
