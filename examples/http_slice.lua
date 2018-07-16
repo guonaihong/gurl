@@ -25,7 +25,7 @@ end
 function send_asr(config)
     local xnumber = 0
     local session_id = uuid:newv4()
-    local f = assert(io.open(config.fname), "rb")
+    local f = assert(io.open(config.fname, "r"))
 
     print("start asr send step:"..config.step.." url "..config.url)
 
@@ -100,7 +100,7 @@ function send_asr(config)
 end
 
 
-if opt["f"] ~= nil or opt["file"] ~= nil then
+if (opt["f"] ~= nil and #opt["f"] ~= 0 ) or (opt["file"] ~= nil and #opt["file"] ~= 0) then
     send_asr({
         appkey = opt.appkey,
         fname = opt["file"],
@@ -111,22 +111,32 @@ if opt["f"] ~= nil or opt["file"] ~= nil then
     return
 end
 
+print("================")
 while not exit do
+    local yes = false
+    local line = {}
+
     channel.select(
     {"|<-", in_ch, function(ok, v)
         if not ok then
             print("channel closed")
             exit = true
         else
-            print("received:", v)
-            local v = strings.split(v, "\t")
-            send_asr({
-                appkey = opt.appkey,
-                fname = v[1],
-                step = 8000,
-                time = 250,
-            })
+            print("###received:", v)
+            line = strings.split(v, "\t")
+            yes = true
         end
     end}
     )
+
+    if yes then
+        print("########## "..line[1])
+        send_asr({
+            appkey = opt.appkey,
+            fname = line[1],
+            step = 8000,
+            time = 250,
+            url = opt.url,
+        })
+    end
 end

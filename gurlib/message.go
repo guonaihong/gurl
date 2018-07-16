@@ -5,6 +5,9 @@ import (
 )
 
 type Message struct {
-	In  chan lua.LValue
-	Out chan lua.LValue
+	In      chan lua.LValue
+	Out     chan lua.LValue
+	InDone  chan lua.LValue
+	OutDone chan lua.LValue
+	K       int
 }

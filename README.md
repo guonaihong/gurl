@@ -29,6 +29,58 @@ env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
 
 #### examples
 * 命令行
+ * bench  
+ 使用-bench选项打开bench模式，可以压测服务端，诊断性能瓶颈，输出如下 
+ ```bash
+ ./gurl -ac 10 -an 1000000 -F text=good  -bench http://127.0.0.1:12346 
+ 
+    Benchmarking 127.0.0.1 (be patient)
+    Completed 100000 requests
+    Completed 200000 requests
+    Completed 300000 requests
+    Completed 400000 requests
+    Completed 500000 requests
+    Completed 600000 requests
+    Completed 700000 requests
+    Completed 800000 requests
+    Completed 900000 requests
+    Completed 1000000 requests
+    Finished 1000000 requests
+    
+    
+    Server Software:        gnc
+    Server Hostname:        
+    Server Port:            12346
+    
+    Document Path:          
+    Document Length:        0 bytes
+    
+    Concurrency Level:      10
+    Time taken for tests:   35.293 seconds
+    Complete requests:      1000000
+    Failed requests:        0
+    Total transferred:      131000000 bytes
+    HTML transferred:       0 bytes
+    Requests per second:    28334.54 [#/sec] (mean)
+    Time per request:       0.353 [ms] (mean)
+    Time per request:       0.035 [ms] (mean, across all concurrent requests)
+    Transfer rate:          3711.83 [Kbytes/sec] received
+    Percentage of the requests served within a certain time (ms)
+      50%    0
+      66%    0
+      75%    0
+      80%    0
+      90%    0
+      95%    0
+      98%    1
+      99%    1
+     100%    14
+
+ ```
+  * 管道模式
+  ```bash
+ ./gurl -an 1 -K ./producer.lua -kargs "-l all.txt" "|" -an 0 -ac 12 -K ./http_slice.lua -kargs "-appkey xx -url http://192.168.6.128:24990/asr/pcm " "|" -an 0 -K ./write_file.lua -kargs "-f asr.result"
+  ```
   * 发送multipart格式到服务端
   ```bash
   # 1.发送字符串test到服务端
@@ -133,54 +185,6 @@ env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
   ./gurl -K demo.cf.js -gen
   gurl -X POST -F mode=A -F text=good -F voice=@./good.opus -url http://127.0.0.1:24909/eval/opus
   ```
- * bench  
- 使用-bench选项打开bench模式，可以压测服务端，诊断性能瓶颈，输出如下 
- ```bash
- ./gurl -ac 10 -an 1000000 -F text=good  -bench http://127.0.0.1:12346 
- 
-    Benchmarking 127.0.0.1 (be patient)
-    Completed 100000 requests
-    Completed 200000 requests
-    Completed 300000 requests
-    Completed 400000 requests
-    Completed 500000 requests
-    Completed 600000 requests
-    Completed 700000 requests
-    Completed 800000 requests
-    Completed 900000 requests
-    Completed 1000000 requests
-    Finished 1000000 requests
-    
-    
-    Server Software:        gnc
-    Server Hostname:        
-    Server Port:            12346
-    
-    Document Path:          
-    Document Length:        0 bytes
-    
-    Concurrency Level:      10
-    Time taken for tests:   35.293 seconds
-    Complete requests:      1000000
-    Failed requests:        0
-    Total transferred:      131000000 bytes
-    HTML transferred:       0 bytes
-    Requests per second:    28334.54 [#/sec] (mean)
-    Time per request:       0.353 [ms] (mean)
-    Time per request:       0.035 [ms] (mean, across all concurrent requests)
-    Transfer rate:          3711.83 [Kbytes/sec] received
-    Percentage of the requests served within a certain time (ms)
-      50%    0
-      66%    0
-      75%    0
-      80%    0
-      90%    0
-      95%    0
-      98%    1
-      99%    1
-     100%    14
-
- ```
 #### 高级用法
 高级用法主要讲如何使用gurl内置的js函数，以下代码都可以通过-K 选项执行，-karg "这里是从给脚本的命令行参数"
 * 在配置文件里面解析命令行配置

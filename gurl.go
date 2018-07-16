@@ -253,6 +253,15 @@ func toFlag(output, str string) (flag int) {
 	return flag
 }
 
+func cancelled(message gurlib.Message) bool {
+	select {
+	case <-message.InDone:
+		return true
+	default:
+		return false
+	}
+}
+
 func (cmd *GurlCmd) LuaMain(message gurlib.Message) {
 
 	conf := cmd.conf
@@ -269,15 +278,17 @@ func (cmd *GurlCmd) LuaMain(message gurlib.Message) {
 
 	c := cmd.c
 
-	defer wg.Wait()
+	defer func() {
+		wg.Wait()
+		close(message.Out)
+		close(message.OutDone)
+	}()
+
 	for i := 0; i < c; i++ {
 
 		wg.Add(1)
-		go func() {
+		go func(id int) {
 			defer wg.Done()
-			defer func() {
-				close(message.Out)
-			}()
 
 			l := NewLuaEngine(cmd.Client)
 			l.L.SetGlobal("gurl_cmd", lua.LString(kargs))
@@ -292,6 +303,10 @@ func (cmd *GurlCmd) LuaMain(message gurlib.Message) {
 							return
 						}
 					}
+				} else {
+					if cancelled(message) && len(message.In) == 0 {
+						return
+					}
 				}
 
 				err = l.L.DoString(string(all))
@@ -300,7 +315,7 @@ func (cmd *GurlCmd) LuaMain(message gurlib.Message) {
 					os.Exit(1)
 				}
 			}
-		}()
+		}(i)
 	}
 
 }
@@ -431,7 +446,7 @@ func gurlMain(message gurlib.Message, argv0 string, argv []string) {
 
 type Chan struct {
 	ch   chan lua.LValue
-	quit chan lua.LValue
+	done chan lua.LValue
 }
 
 func main() {
@@ -463,7 +478,7 @@ func main() {
 
 	for k, v := range cmds {
 		channel = append(channel, &Chan{
-			quit: make(chan lua.LValue, 2),
+			done: make(chan lua.LValue),
 			ch:   make(chan lua.LValue, 1000),
 		})
 
@@ -473,11 +488,14 @@ func main() {
 			}()
 
 			m := gurlib.Message{
-				Out: ch[k].ch,
+				Out:     ch[k].ch,
+				OutDone: ch[k].done,
+				K:       k,
 			}
 
 			if k > 0 {
 				m.In = ch[k-1].ch
+				m.InDone = ch[k-1].done
 			}
 
 			//fmt.Printf("k=%d, %#v\n", k, m)
