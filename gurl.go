@@ -402,11 +402,11 @@ func gurlMain(message gurlib.Message, argv0 string, argv []string) {
 
 	if *gen {
 		if len(*conf) > 0 {
-			gurlib.Lua2Cmd(*conf)
+			Lua2Cmd(*conf, *kargs)
 			return
 		}
 
-		gurlib.Cmd2Lua(&g)
+		Cmd2Lua(&g)
 		return
 	}
 
