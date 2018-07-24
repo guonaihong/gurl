@@ -8,17 +8,17 @@ Gurl is a pain point in the process of using curl.Gurl implements curl command l
 
 #### Features
 - Supports some of curl's features
-- Supports some of the features of httpie
 - Supports some of the functions of ab, and the performance is higher than the ab command
 - Support regular running gurl (support cron expression function)
-- Support js as configuration file (support for if, else, for, func)
+- Support lua as configuration file (support for if, else, for, func)
 - Url support abbreviations
+- Support pipeline mode
 
 #### Recommended use process
 1、Using the gurl command line option to enable the function, many users complete the task after this step.
-2、If there is a hard-to-remember part of the command line and you need to use it often, save it to a file using the gurl -gen &>demo.cf.js command.
-3、gurl -K demo.cf.js accesses the server based on the data in the configuration file.
-4、If you want to modify demo.cf.js and you are not familiar with the configuration of the configuration file, you can use the ./gurl -K demo.cf.js -gen command to convert the demo.cf.js data to the command line, and then repeat step 1. operating.
+2、If there is a hard-to-remember part of the command line and you need to use it often, save it to a file using the gurl -gen &>demo.lua command.
+3、gurl -K demo.lua accesses the server based on the data in the configuration file.
+4、If you want to modify demo.lua and you are not familiar with the configuration of the configuration file, you can use the ./gurl -K demo.lua -gen command to convert the demo.lua data to the command line, and then repeat step 1. operating.
 
 #### install
 ```bash
@@ -27,6 +27,58 @@ env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
 
 #### examples
 * Command Line
+ * bench
+ Use the "-bench" option to turn on the benchmark mode to test the server and diagnose performance bottlenecks. The output is as follows
+ ```bash
+ ./gurl -ac 10 -an 1000000 -F text=good  -bench http://127.0.0.1:12346 
+ 
+    Benchmarking 127.0.0.1 (be patient)
+    Completed 100000 requests
+    Completed 200000 requests
+    Completed 300000 requests
+    Completed 400000 requests
+    Completed 500000 requests
+    Completed 600000 requests
+    Completed 700000 requests
+    Completed 800000 requests
+    Completed 900000 requests
+    Completed 1000000 requests
+    Finished 1000000 requests
+    
+    
+    Server Software:        gnc
+    Server Hostname:        
+    Server Port:            12346
+    
+    Document Path:          
+    Document Length:        0 bytes
+    
+    Concurrency Level:      10
+    Time taken for tests:   35.293 seconds
+    Complete requests:      1000000
+    Failed requests:        0
+    Total transferred:      131000000 bytes
+    HTML transferred:       0 bytes
+    Requests per second:    28334.54 [#/sec] (mean)
+    Time per request:       0.353 [ms] (mean)
+    Time per request:       0.035 [ms] (mean, across all concurrent requests)
+    Transfer rate:          3711.83 [Kbytes/sec] received
+    Percentage of the requests served within a certain time (ms)
+      50%    0
+      66%    0
+      75%    0
+      80%    0
+      90%    0
+      95%    0
+      98%    1
+      99%    1
+     100%    14
+
+ ```
+  * Pipe mode
+  ```bash
+ ./gurl -an 1 -K ./producer.lua -kargs "-l all.txt" "|" -an 0 -ac 12 -K ./http_slice.lua -kargs "-appkey xx -url http://192.168.6.128:24990/asr/pcm " "|" -an 0 -K ./write_file.lua -kargs "-f asr.result"
+  ```
   * Send multipart format to server
   ```bash
   # 1.Send the string “test” to the server
@@ -127,88 +179,85 @@ env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
  * Profile
    * Generate a configuration file from the command line data (option -gen)
 
-  ```js
-  ./gurl -X POST -F mode=A -F text=good -F voice=@./good.opus -url http://127.0.0.1:24909/eval/opus -gen &>demo.cf.js 
-    var program = gurl_flag();
-    var flag = program
-        .option("url", "", "Remote service address")
-        .parse()
+  ```lua
+  ./gurl -X POST -F mode=A -F text=good -F voice=@./good.opus -url http://127.0.0.1:24909/eval/opus -gen &>demo.lua 
 
-    var cmd = {
-        "method": "POST",
-        "F": [
-            "mode=A",
-            "text=good",
-            "voice=@./good.opus"
-        ],
-        "url": "http://127.0.0.1:24909/eval/opus",
-        "o": "stdout",
-        "Flag": 0,
-        "A": "gurl"
-    };
-
-    if (flag.url.length > 0) {
-        cmd.url = flag.url;
-    }
-
-    var http = gurl_http();
-    var rsp  = http.send(cmd);
-    console.log(rsp.body);
   ```
   * Turn the configuration file into a command line (option -gen -K configuration file)
   ```bash
-  ./gurl -K demo.cf.js -gen
+  ./gurl -K demo.lua -gen
   gurl -X POST -F mode=A -F text=good -F voice=@./good.opus -url http://127.0.0.1:24909/eval/opus
   ```
- * bench  
- Use the "-bench" option to turn on the benchmark mode to test the server and diagnose performance bottlenecks. The output is as follows
+#### Advanced usage
 
- ```bash
- ./gurl -ac 10 -an 1000000 -F text=good  -bench http://127.0.0.1:12346 
- 
-    Benchmarking 127.0.0.1 (be patient)
-    Completed 100000 requests
-    Completed 200000 requests
-    Completed 300000 requests
-    Completed 400000 requests
-    Completed 500000 requests
-    Completed 600000 requests
-    Completed 700000 requests
-    Completed 800000 requests
-    Completed 900000 requests
-    Completed 1000000 requests
-    Finished 1000000 requests
-    
-    
-    Server Software:        gnc
-    Server Hostname:        
-    Server Port:            12346
-    
-    Document Path:          
-    Document Length:        0 bytes
-    
-    Concurrency Level:      10
-    Time taken for tests:   35.293 seconds
-    Complete requests:      1000000
-    Failed requests:        0
-    Total transferred:      131000000 bytes
-    HTML transferred:       0 bytes
-    Requests per second:    28334.54 [#/sec] (mean)
-    Time per request:       0.353 [ms] (mean)
-    Time per request:       0.035 [ms] (mean, across all concurrent requests)
-    Transfer rate:          3711.83 [Kbytes/sec] received
-    Percentage of the requests served within a certain time (ms)
-      50%    0
-      66%    0
-      75%    0
-      80%    0
-      90%    0
-      95%    0
-      98%    1
-      99%    1
-     100%    14
+```lua
+    local cmd = require("cmd")
+    local flag = cmd.new()
+    local opt = flag
+            :opt_str("f, file", "", "open audio file")
+            :opt_str("a, addr", "", "Remote service address")
+            :parse("-f ./tst.pcm -a 127.0.0.1:8080")
 
- ```
+    function tableHasKey(table, key)
+        return table[key] ~= nil 
+    end
+
+    if (not tableHasKey(opt, "f")) or
+        (not tableHasKey(opt, "file")) or
+        (not tableHasKey(opt, "a")) or
+        (not tableHasKey(opt, "addr")) then
+
+        opt.Usage()
+
+        return
+    end
+
+    for k, v in pairs(opt) do
+        print("cmd opt ("..k..") parse value ("..v..")")
+    end
+
+```
+* send http request
+```lua
+    local http = require("http")
+    local rsp = http.send({
+        H = { 
+            "appkey:"..config.appkey,
+            "X-Number:"..xnumber,
+            "session-id:"..session_id,
+        },
+        MF = {
+            "voice=" .. bytes,
+        },
+        url = config.url
+    })
+
+    --print("bytes ("..bytes..")")
+    if #rsp["err"] ~= 0 then
+        print("rsp error is ".. rsp["err"])
+        return
+    end
+
+    if rsp["status_code"] == 200 then
+        body = rsp["body"]
+        if #rsp["body"] == 0 then
+             body = "{}"
+        end
+        print(json.format(body))
+    else
+        print("error http code".. rsp["status_code"])
+    end
+
+```
+
+* sleep
+```lua
+    local time = require("time")
+    time.sleep(250, "ms")
+    time.sleep(1, "s")
+    time.sleep(1, "m")
+    time.sleep(1, "h")
+```
 #### TODO
 * bugfix
 * Add some very handy features
