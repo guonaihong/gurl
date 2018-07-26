@@ -29,7 +29,7 @@ env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
 
 #### examples
 * 命令行
- * bench  
+ * bench
  使用-bench选项打开bench模式，可以压测服务端，诊断性能瓶颈，输出如下 
  ```bash
  ./gurl -ac 10 -an 1000000 -F text=good  -bench http://127.0.0.1:12346 
