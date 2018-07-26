@@ -79,6 +79,7 @@ func toJson(J []string, bodyJson map[string]interface{}) {
 	for _, v := range J {
 		pos := strings.Index(v, ":")
 		if pos == -1 {
+			bodyJson[v] = ""
 			continue
 		}
 
@@ -113,6 +114,11 @@ func toJson(J []string, bodyJson map[string]interface{}) {
 				curMap = vv.(jsonObj)
 
 			}
+			continue
+		}
+
+		if len(val) == 0 {
+			bodyJson[key] = ""
 			continue
 		}
 
