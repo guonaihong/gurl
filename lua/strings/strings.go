@@ -1,6 +1,7 @@
 package strings
 
 import (
+	_ "fmt"
 	"github.com/yuin/gopher-lua"
 	gostrings "strings"
 )
@@ -28,9 +29,17 @@ func split(L *lua.LState) int {
 	return 1
 }
 
+func rep(L *lua.LState) int {
+	s := L.CheckString(1)
+	count := L.CheckInt(2)
+	L.Push(lua.LString(gostrings.Repeat(s, count)))
+	return 1
+}
+
 func Loader(L *lua.LState) int {
 	mod := L.SetFuncs(L.NewTable(), map[string]lua.LGFunction{
 		"split": split,
+		"rep":   rep,
 	})
 
 	L.Push(mod)
