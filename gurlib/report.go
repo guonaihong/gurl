@@ -32,8 +32,7 @@ type Report struct {
 func NewReport(c, n int, url string) *Report {
 	step := 0
 	if n > 150 {
-		step = n / 10
-		if step < 100 {
+		if step = n / 10; step < 100 {
 			step = 100
 		}
 	}
@@ -178,12 +177,10 @@ func (r *Report) StartReport() {
 		for v := range r.percent {
 
 			r.recvN++
-			if r.step > 0 {
-				if r.recvN%r.step == 0 {
-					fmt.Printf("Completed %d requests\n", r.recvN)
-				}
-
+			if r.step > 0 && r.recvN%r.step == 0 {
+				fmt.Printf("Completed %d requests\n", r.recvN)
 			}
+
 			r.percents = append(r.percents, v)
 		}
 
