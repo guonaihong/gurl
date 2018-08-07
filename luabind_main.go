@@ -1,12 +1,13 @@
 package main
 
 import (
-	"github.com/guonaihong/gurl/lua/cmdparse"
 	myhttp "github.com/guonaihong/gurl/lua/http"
-	"github.com/guonaihong/gurl/lua/json"
-	"github.com/guonaihong/gurl/lua/strings"
-	"github.com/guonaihong/gurl/lua/time"
-	"github.com/guonaihong/gurl/lua/uuid"
+
+	"github.com/guonaihong/glua/lib/cmdparse"
+	"github.com/guonaihong/glua/lib/json"
+	"github.com/guonaihong/glua/lib/strings"
+	"github.com/guonaihong/glua/lib/time"
+	"github.com/guonaihong/glua/lib/uuid"
 	"github.com/yuin/gopher-lua"
 	"net/http"
 )
