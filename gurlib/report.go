@@ -8,25 +8,31 @@ import (
 	"time"
 )
 
+type result struct {
+	time       int
+	statusCode int
+}
+
 type Report struct {
-	percent    chan int
-	addr       string
-	laddr      string
-	serverName string
-	port       string
-	path       string
-	percents   []int
-	c          int
-	n          int
-	doneNum    int32
-	recvN      int
-	weNum      int32
-	totalRead  int32
-	totalBody  int32
-	step       int
-	length     int
-	startNow   time.Time
-	quit       chan struct{}
+	allResult   chan result
+	statusCodes map[int]int
+	addr        string
+	laddr       string
+	serverName  string
+	port        string
+	path        string
+	allTimes    []int
+	c           int
+	n           int
+	recvN       int
+	step        int
+	length      int
+	doneNum     int32
+	weNum       int32
+	totalRead   int32
+	totalBody   int32
+	startNow    time.Time
+	quit        chan struct{}
 }
 
 func NewReport(c, n int, url string) *Report {
@@ -38,13 +44,14 @@ func NewReport(c, n int, url string) *Report {
 	}
 
 	r := &Report{
-		percent:  make(chan int, 1000),
-		quit:     make(chan struct{}, 1),
-		laddr:    url,
-		startNow: time.Now(),
-		c:        c,
-		n:        n,
-		step:     step,
+		allResult:   make(chan result, 1000),
+		quit:        make(chan struct{}, 1),
+		laddr:       url,
+		startNow:    time.Now(),
+		c:           c,
+		n:           n,
+		step:        step,
+		statusCodes: make(map[int]int, 2),
 	}
 
 	r.parseUrl()
@@ -64,7 +71,10 @@ func (r *Report) Cal(now time.Time, resp *Response) {
 	atomic.AddInt32(&r.doneNum, 1)
 	r.calBody(resp)
 
-	r.percent <- int(time.Now().Sub(now) / time.Millisecond)
+	r.allResult <- result{
+		time:       int(time.Now().Sub(now) / time.Millisecond),
+		statusCode: resp.StatusCode,
+	}
 }
 
 func (r *Report) calBody(resp *Response) {
@@ -89,6 +99,7 @@ func (r *Report) calBody(resp *Response) {
 
 	hN += 2
 
+	atomic.AddInt32(&r.totalBody, int32(bodyN))
 	atomic.AddInt32(&r.totalRead, int32(hN))
 	atomic.AddInt32(&r.totalRead, int32(bodyN))
 }
@@ -96,7 +107,7 @@ func (r *Report) calBody(resp *Response) {
 func (r *Report) report() {
 
 	timeTake := time.Now().Sub(r.startNow)
-	percents := r.percents
+	allTimes := r.allTimes
 
 	fmt.Printf("\n\n")
 	fmt.Printf("Server Software:        %s\n", r.serverName)
@@ -107,6 +118,12 @@ func (r *Report) report() {
 	fmt.Printf("Document Path:          %s\n", r.path)
 	fmt.Printf("Document Length:        %d bytes\n", r.length)
 	fmt.Printf("\n")
+
+	fmt.Printf("Status Codes:          ")
+	for k, v := range r.statusCodes {
+		fmt.Printf(" %d:%d  ", k, v)
+	}
+	fmt.Printf("[code:count]\n")
 
 	fmt.Printf("Concurrency Level:      %d\n", r.c)
 	fmt.Printf("Time taken for tests:   %.3f seconds\n", timeTake.Seconds())
@@ -127,21 +144,21 @@ func (r *Report) report() {
 	fmt.Printf("Transfer rate:          %.2f [Kbytes/sec] received\n",
 		float64(r.totalRead)/float64(1000)/timeTake.Seconds())
 
-	sort.Slice(percents, func(i, j int) bool {
-		return percents[i] < percents[j]
+	sort.Slice(allTimes, func(i, j int) bool {
+		return allTimes[i] < allTimes[j]
 	})
 
-	if len(percents) > 1 {
+	if len(allTimes) > 1 {
 		fmt.Printf("Percentage of the requests served within a certain time (ms)\n")
-		fmt.Printf("  50%%    %d\n", percents[int(float64(len(percents))*0.5)])
-		fmt.Printf("  66%%    %d\n", percents[int(float64(len(percents))*0.66)])
-		fmt.Printf("  75%%    %d\n", percents[int(float64(len(percents))*0.75)])
-		fmt.Printf("  80%%    %d\n", percents[int(float64(len(percents))*0.80)])
-		fmt.Printf("  90%%    %d\n", percents[int(float64(len(percents))*0.90)])
-		fmt.Printf("  95%%    %d\n", percents[int(float64(len(percents))*0.95)])
-		fmt.Printf("  98%%    %d\n", percents[int(float64(len(percents))*0.98)])
-		fmt.Printf("  99%%    %d\n", percents[int(float64(len(percents))*0.99)])
-		fmt.Printf(" 100%%    %d\n", percents[len(percents)-1])
+		fmt.Printf("  50%%    %d\n", allTimes[int(float64(len(allTimes))*0.5)])
+		fmt.Printf("  66%%    %d\n", allTimes[int(float64(len(allTimes))*0.66)])
+		fmt.Printf("  75%%    %d\n", allTimes[int(float64(len(allTimes))*0.75)])
+		fmt.Printf("  80%%    %d\n", allTimes[int(float64(len(allTimes))*0.80)])
+		fmt.Printf("  90%%    %d\n", allTimes[int(float64(len(allTimes))*0.90)])
+		fmt.Printf("  95%%    %d\n", allTimes[int(float64(len(allTimes))*0.95)])
+		fmt.Printf("  98%%    %d\n", allTimes[int(float64(len(allTimes))*0.98)])
+		fmt.Printf("  99%%    %d\n", allTimes[int(float64(len(allTimes))*0.99)])
+		fmt.Printf(" 100%%    %d\n", allTimes[len(allTimes)-1])
 	}
 }
 
@@ -174,14 +191,15 @@ func (r *Report) StartReport() {
 			r.quit <- struct{}{}
 		}()
 
-		for v := range r.percent {
+		for v := range r.allResult {
 
 			r.recvN++
 			if r.step > 0 && r.recvN%r.step == 0 {
 				fmt.Printf("Completed %d requests\n", r.recvN)
 			}
 
-			r.percents = append(r.percents, v)
+			r.allTimes = append(r.allTimes, v.time)
+			r.statusCodes[v.statusCode]++
 		}
 
 	}()
@@ -189,7 +207,7 @@ func (r *Report) StartReport() {
 }
 
 func (r *Report) Wait() {
-	close(r.percent)
+	close(r.allResult)
 	<-r.quit
 	r.report()
 }

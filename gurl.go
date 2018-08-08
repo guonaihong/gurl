@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/signal"
 	"runtime"
 	"strings"
 	"sync"
@@ -105,6 +106,11 @@ func (cmd *GurlCmd) benchMain() {
 	g.ParseInit()
 	report := gurlib.NewReport(c, n, url)
 
+	sig := make(chan os.Signal, 1)
+	done := make(chan struct{}, 1)
+
+	signal.Notify(sig, os.Interrupt)
+
 	for i := 0; i < c; i++ {
 
 		wg.Add(1)
@@ -127,8 +133,22 @@ func (cmd *GurlCmd) benchMain() {
 	}
 
 	report.StartReport()
-	wg.Wait()
-	report.Wait()
+	go func() {
+		wg.Wait()
+		done <- struct{}{}
+	}()
+
+end:
+	for {
+		select {
+		case <-sig:
+			report.Wait()
+			break end
+		case <-done:
+			report.Wait()
+			break end
+		}
+	}
 	os.Exit(0)
 }
 
