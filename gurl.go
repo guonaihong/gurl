@@ -26,6 +26,7 @@ const (
 )
 
 type GurlCmd struct {
+	rate     int
 	c        int
 	n        int
 	conf     string
@@ -96,12 +97,10 @@ func (cmd *GurlCmd) Producer() {
 
 func (cmd *GurlCmd) benchMain() {
 
-	c := cmd.c
-	n := cmd.n
+	c, n := cmd.c, cmd.n
 	g := cmd.Gurl
 	url := g.Url
-	work := cmd.work
-	wg := &cmd.wg
+	work, wg := cmd.work, &cmd.wg
 
 	g.ParseInit()
 	report := gurlib.NewReport(c, n, url)
@@ -111,15 +110,46 @@ func (cmd *GurlCmd) benchMain() {
 
 	signal.Notify(sig, os.Interrupt)
 
+	begin := time.Now()
+
+	interval := 0
+	count := 0
+	if cmd.rate > 0 {
+		interval = int(time.Second) / cmd.rate
+	}
+
+	if interval > 0 {
+		work = make(chan struct{}, 1000)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			for {
+				next := begin.Add(time.Duration(count * interval))
+				time.Sleep(next.Sub(time.Now()))
+
+				select {
+				case <-cmd.work:
+				default:
+				}
+
+				work <- struct{}{}
+				if count++; count == n {
+					close(work)
+					return
+				}
+			}
+		}()
+	}
+
 	for i := 0; i < c; i++ {
 
 		wg.Add(1)
 
-		go func() {
+		go func(id int) {
 			defer wg.Done()
 
 			for range work {
-
 				taskNow := time.Now()
 				rsp, err := g.Send()
 				if err != nil {
@@ -129,7 +159,8 @@ func (cmd *GurlCmd) benchMain() {
 
 				report.Cal(taskNow, rsp)
 			}
-		}()
+
+		}(i)
 	}
 
 	report.StartReport()
@@ -357,6 +388,7 @@ func gurlMain(message gurlib.Message, argv0 string, argv []string) {
 	URL := commandlLine.String("url", "", "Specify a URL to fetch")
 	an := commandlLine.Int("an", 1, "Number of requests to perform")
 	ac := commandlLine.Int("ac", 1, "Number of multiple requests to make")
+	rate := commandlLine.Int("rate", 0, "Requests per second")
 	bench := commandlLine.Bool("bench", false, "Run benchmarks test")
 	conns := commandlLine.Int("conns", DefaultConnections, "Max open idle connections per target host")
 	cpus := commandlLine.Int("cpus", 0, "Number of CPUs to use")
@@ -433,6 +465,7 @@ func gurlMain(message gurlib.Message, argv0 string, argv []string) {
 	cmd := GurlCmd{
 		c:        *ac,
 		n:        *an,
+		rate:     *rate,
 		conf:     *conf,
 		KArgs:    *kargs,
 		cronExpr: *cronExpr,

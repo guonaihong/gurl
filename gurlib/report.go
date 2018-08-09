@@ -195,7 +195,8 @@ func (r *Report) StartReport() {
 
 			r.recvN++
 			if r.step > 0 && r.recvN%r.step == 0 {
-				fmt.Printf("Completed %d requests\n", r.recvN)
+				fmt.Printf("Completed %7d requests [%s]\n", r.recvN,
+					time.Now().Format("2006-01-02 15:04:05.999"))
 			}
 
 			r.allTimes = append(r.allTimes, v.time)

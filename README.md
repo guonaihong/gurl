@@ -30,7 +30,8 @@ env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
 #### examples
 * 命令行
  * bench
- 使用-bench选项打开bench模式，可以压测服务端，诊断性能瓶颈，输出如下 
+ 使用-bench选项打开bench(压测)模式，可以压测服务端，诊断性能瓶颈
+ ac可以指定线程数, an可以指定跑多少次 ，输出如下 
  ```bash
  ./gurl -ac 10 -an 1000000 -F text=good  -bench http://127.0.0.1:12346 
  
@@ -77,6 +78,53 @@ env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
      100%    14
 
  ```
+ 使用-bench 选项打开bench(压测)模式, -rate 指定每秒写多少条消息
+```
+    ./gurl -bench -ac 10 -an 3000 -rate 3000 :1234
+    Benchmarking 127.0.0.1 (be patient)
+    Completed     300 requests [2018-08-09 21:43:20.643]
+    Completed     600 requests [2018-08-09 21:43:20.743]
+    Completed     900 requests [2018-08-09 21:43:20.843]
+    Completed    1200 requests [2018-08-09 21:43:20.943]
+    Completed    1500 requests [2018-08-09 21:43:21.043]
+    Completed    1800 requests [2018-08-09 21:43:21.143]
+    Completed    2100 requests [2018-08-09 21:43:21.243]
+    Completed    2400 requests [2018-08-09 21:43:21.343]
+    Completed    2700 requests [2018-08-09 21:43:21.443]
+    Completed    3000 requests [2018-08-09 21:43:21.543]
+    Finished 3000 requests
+
+
+    Server Software:        gurl-server
+    Server Hostname:        
+    Server Port:            1234
+
+    Document Path:          
+    Document Length:        0 bytes
+
+    Status Codes:           200:3000  [code:count]
+    Concurrency Level:      10
+    Time taken for tests:   1.000 seconds
+    Complete requests:      3000
+    Failed requests:        0
+    Total transferred:      411000 bytes
+    HTML transferred:       0 bytes
+    Requests per second:    2999.41 [#/sec] (mean)
+    Time per request:       3.334 [ms] (mean)
+    Time per request:       0.333 [ms] (mean, across all concurrent requests)
+    Transfer rate:          410.92 [Kbytes/sec] received
+    Percentage of the requests served within a certain time (ms)
+      50%    0
+      66%    0
+      75%    0
+      80%    0
+      90%    0
+      95%    0
+      98%    0
+      99%    0
+     100%    7
+
+```
   * 管道模式
   ```bash
  ./gurl -an 1 -K ./producer.lua -kargs "-l all.txt" "|" -an 0 -ac 12 -K ./http_slice.lua -kargs "-appkey xx -url http://192.168.6.128:24990/asr/pcm " "|" -an 0 -K ./write_file.lua -kargs "-f asr.result"
