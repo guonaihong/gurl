@@ -26,6 +26,7 @@ const (
 )
 
 type GurlCmd struct {
+	duration string
 	rate     int
 	c        int
 	n        int
@@ -113,29 +114,62 @@ func (cmd *GurlCmd) benchMain() {
 	begin := time.Now()
 
 	interval := 0
-	count := 0
 	if cmd.rate > 0 {
 		interval = int(time.Second) / cmd.rate
 	}
 
+	if len(cmd.duration) > 0 {
+		if t := gurlib.ParseTime(cmd.duration); int(t) > 0 {
+			wg.Add(1)
+
+			workTimeout := make(chan struct{}, 1000)
+			work = workTimeout
+			ticker := time.NewTicker(t)
+
+			go func() {
+
+				defer func() {
+					close(workTimeout)
+					wg.Done()
+				}()
+
+				for {
+					select {
+					case <-ticker.C:
+						return
+					default:
+					}
+					workTimeout <- struct{}{}
+				}
+			}()
+		}
+	}
+
 	if interval > 0 {
+		count := 0
+		oldwork := work
 		work = make(chan struct{}, 1000)
 		wg.Add(1)
 		go func() {
-			defer wg.Done()
+			defer func() {
+				close(work)
+				wg.Done()
+			}()
 
 			for {
 				next := begin.Add(time.Duration(count * interval))
 				time.Sleep(next.Sub(time.Now()))
 
 				select {
-				case <-cmd.work:
+				case _, ok := <-oldwork:
+					if !ok {
+						return
+					}
 				default:
 				}
 
 				work <- struct{}{}
 				if count++; count == n {
-					close(work)
 					return
 				}
 			}
@@ -378,12 +412,12 @@ func gurlMain(message gurlib.Message, argv0 string, argv []string) {
 	forms := commandlLine.StringSlice("F, form", []string{}, "Specify HTTP multipart POST data (H)")
 	jfa := commandlLine.StringSlice("Jfa", []string{}, "Specify HTTP multipart POST json data (H)")
 	cronExpr := commandlLine.String("cron", "", "Cron expression")
-	conf := commandlLine.String("K, config", "", "Read js config from FILE")
+	conf := commandlLine.String("K, config", "", "lua script")
 	kargs := commandlLine.String("kargs", "", "Command line parameters passed to the configuration file")
 	output := commandlLine.String("o, output", "stdout", "Write to FILE instead of stdout")
 	oflag := commandlLine.String("oflag", "", "Control the way you write(append|line|trunc)")
 	method := commandlLine.String("X, request", "", "Specify request command to use")
-	gen := commandlLine.Bool("gen", false, "Generate the default js configuration file")
+	gen := commandlLine.Bool("gen", false, "Generate the default lua script")
 	toJson := commandlLine.StringSlice("J", []string{}, `Turn key:value into {"key": "value"})`)
 	URL := commandlLine.String("url", "", "Specify a URL to fetch")
 	an := commandlLine.Int("an", 1, "Number of requests to perform")
@@ -396,6 +430,7 @@ func gurlMain(message gurlib.Message, argv0 string, argv []string) {
 	data := commandlLine.String("d, data", "", "HTTP POST data")
 	verbose := commandlLine.Bool("v, verbose", false, "Make the operation more talkative")
 	agent := commandlLine.String("A, user-agent", "gurl", "Send User-Agent STRING to server")
+	duration := commandlLine.String("duration", "", "Duration of the test")
 
 	commandlLine.Author("guonaihong https://github.com/guonaihong/gurl")
 	commandlLine.Parse(argv)
@@ -463,6 +498,7 @@ func gurlMain(message gurlib.Message, argv0 string, argv []string) {
 	}
 
 	cmd := GurlCmd{
+		duration: *duration,
 		c:        *ac,
 		n:        *an,
 		rate:     *rate,

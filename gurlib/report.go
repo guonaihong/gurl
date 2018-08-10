@@ -9,7 +9,7 @@ import (
 )
 
 type result struct {
-	time       int
+	time       float64
 	statusCode int
 }
 
@@ -21,7 +21,7 @@ type Report struct {
 	serverName  string
 	port        string
 	path        string
-	allTimes    []int
+	allTimes    []float64
 	c           int
 	n           int
 	recvN       int
@@ -72,7 +72,7 @@ func (r *Report) Cal(now time.Time, resp *Response) {
 	r.calBody(resp)
 
 	r.allResult <- result{
-		time:       int(time.Now().Sub(now) / time.Millisecond),
+		time:       float64(time.Now().Sub(now)) / float64(time.Millisecond),
 		statusCode: resp.StatusCode,
 	}
 }
@@ -150,15 +150,15 @@ func (r *Report) report() {
 
 	if len(allTimes) > 1 {
 		fmt.Printf("Percentage of the requests served within a certain time (ms)\n")
-		fmt.Printf("  50%%    %d\n", allTimes[int(float64(len(allTimes))*0.5)])
-		fmt.Printf("  66%%    %d\n", allTimes[int(float64(len(allTimes))*0.66)])
-		fmt.Printf("  75%%    %d\n", allTimes[int(float64(len(allTimes))*0.75)])
-		fmt.Printf("  80%%    %d\n", allTimes[int(float64(len(allTimes))*0.80)])
-		fmt.Printf("  90%%    %d\n", allTimes[int(float64(len(allTimes))*0.90)])
-		fmt.Printf("  95%%    %d\n", allTimes[int(float64(len(allTimes))*0.95)])
-		fmt.Printf("  98%%    %d\n", allTimes[int(float64(len(allTimes))*0.98)])
-		fmt.Printf("  99%%    %d\n", allTimes[int(float64(len(allTimes))*0.99)])
-		fmt.Printf(" 100%%    %d\n", allTimes[len(allTimes)-1])
+		fmt.Printf("  50%%    %0.2fms\n", allTimes[int(float64(len(allTimes))*0.5)])
+		fmt.Printf("  66%%    %0.2fms\n", allTimes[int(float64(len(allTimes))*0.66)])
+		fmt.Printf("  75%%    %0.2fms\n", allTimes[int(float64(len(allTimes))*0.75)])
+		fmt.Printf("  80%%    %0.2fms\n", allTimes[int(float64(len(allTimes))*0.80)])
+		fmt.Printf("  90%%    %0.2fms\n", allTimes[int(float64(len(allTimes))*0.90)])
+		fmt.Printf("  95%%    %0.2fms\n", allTimes[int(float64(len(allTimes))*0.95)])
+		fmt.Printf("  98%%    %0.2fms\n", allTimes[int(float64(len(allTimes))*0.98)])
+		fmt.Printf("  99%%    %0.2fms\n", allTimes[int(float64(len(allTimes))*0.99)])
+		fmt.Printf(" 100%%    %0.2fms\n", allTimes[len(allTimes)-1])
 	}
 }
 
@@ -182,11 +182,16 @@ func (r *Report) parseUrl() {
 	fmt.Printf("Benchmarking %s (be patient)\n", addr)
 }
 
+func zeroMilliseconds(ms string) string {
+	ms = ms[1:] //skip .
+	return fmt.Sprintf(".%03s", ms)
+}
+
 func (r *Report) StartReport() {
 	go func() {
 		defer func() {
 			if r.step > 0 {
-				fmt.Printf("Finished %d requests\n", r.recvN)
+				fmt.Printf("  Finished  %15d requests\n", r.recvN)
 			}
 			r.quit <- struct{}{}
 		}()
@@ -195,8 +200,9 @@ func (r *Report) StartReport() {
 
 			r.recvN++
 			if r.step > 0 && r.recvN%r.step == 0 {
-				fmt.Printf("Completed %7d requests [%s]\n", r.recvN,
-					time.Now().Format("2006-01-02 15:04:05.999"))
+				now := time.Now()
+				fmt.Printf("  Completed %15d requests [%s%s]\n", r.recvN,
+					now.Format("2006-01-02 15:04:05"), zeroMilliseconds(now.Format(".999")))
 			}
 
 			r.allTimes = append(r.allTimes, v.time)
