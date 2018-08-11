@@ -15,24 +15,25 @@ type result struct {
 
 type Report struct {
 	allResult   chan result
+	quit        chan struct{}
+	allTimes    []float64
 	statusCodes map[int]int
+	startNow    time.Time
 	addr        string
 	laddr       string
 	serverName  string
 	port        string
 	path        string
-	allTimes    []float64
 	c           int
 	n           int
 	recvN       int
 	step        int
 	length      int
+	duration    time.Duration
 	doneNum     int32
 	weNum       int32
 	totalRead   int32
 	totalBody   int32
-	startNow    time.Time
-	quit        chan struct{}
 }
 
 func NewReport(c, n int, url string) *Report {
@@ -57,6 +58,10 @@ func NewReport(c, n int, url string) *Report {
 	r.parseUrl()
 
 	return r
+}
+
+func (r *Report) SetDuration(t time.Duration) {
+	r.duration = t
 }
 
 func (r *Report) AddErrNum() {
@@ -190,23 +195,51 @@ func zeroMilliseconds(ms string) string {
 func (r *Report) StartReport() {
 	go func() {
 		defer func() {
-			if r.step > 0 {
-				fmt.Printf("  Finished  %15d requests\n", r.recvN)
-			}
+			fmt.Printf("  Finished  %15d requests\n", r.recvN)
 			r.quit <- struct{}{}
 		}()
 
-		for v := range r.allResult {
+		if r.step > 0 {
+			for v := range r.allResult {
 
-			r.recvN++
-			if r.step > 0 && r.recvN%r.step == 0 {
-				now := time.Now()
-				fmt.Printf("  Completed %15d requests [%s%s]\n", r.recvN,
-					now.Format("2006-01-02 15:04:05"), zeroMilliseconds(now.Format(".999")))
+				r.recvN++
+				if r.step > 0 && r.recvN%r.step == 0 {
+					now := time.Now()
+					fmt.Printf("  Completed %15d requests [%s%s]\n", r.recvN,
+						now.Format("2006-01-02 15:04:05"), zeroMilliseconds(now.Format(".999")))
+				}
+
+				r.allTimes = append(r.allTimes, v.time)
+				r.statusCodes[v.statusCode]++
 			}
+		} else {
+			begin := time.Now()
+			interval := r.duration / 10
+			nTick := time.NewTicker(interval)
+			count := 1
+			for {
+				select {
+				case <-nTick.C:
+					now := time.Now()
+					fmt.Printf("  Completed %15d requests [%s%s]\n", r.recvN,
+						now.Format("2006-01-02 15:04:05"), zeroMilliseconds(now.Format(".999")))
+					count++
+					next := begin.Add(time.Duration(count * int(interval)))
+					if newInterval := next.Sub(time.Now()); newInterval > 0 {
+						nTick = time.NewTicker(newInterval)
+					} else {
+						nTick = time.NewTicker(time.Millisecond * 100)
+					}
+				case v, ok := <-r.allResult:
+					if !ok {
+						return
+					}
 
-			r.allTimes = append(r.allTimes, v.time)
-			r.statusCodes[v.statusCode]++
+					r.recvN++
+					r.allTimes = append(r.allTimes, v.time)
+					r.statusCodes[v.statusCode]++
+				}
+			}
 		}
 
 	}()

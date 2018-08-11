@@ -104,7 +104,6 @@ func (cmd *GurlCmd) benchMain() {
 	work, wg := cmd.work, &cmd.wg
 
 	g.ParseInit()
-	report := gurlib.NewReport(c, n, url)
 
 	sig := make(chan os.Signal, 1)
 	done := make(chan struct{}, 1)
@@ -118,10 +117,12 @@ func (cmd *GurlCmd) benchMain() {
 		interval = int(time.Second) / cmd.rate
 	}
 
+	report := gurlib.NewReport(c, n, url)
 	if len(cmd.duration) > 0 {
 		if t := gurlib.ParseTime(cmd.duration); int(t) > 0 {
 			wg.Add(1)
 
+			report.SetDuration(t)
 			workTimeout := make(chan struct{}, 1000)
 			work = workTimeout
 			ticker := time.NewTicker(t)

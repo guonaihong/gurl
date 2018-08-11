@@ -27,72 +27,80 @@ gurl 是使用curl过程中的痛点改进。gurl实现了本人经常使用的c
 env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
 ```
 
-#### examples
-* 命令行
- * bench
- 使用-bench选项打开bench(压测)模式，可以压测服务端，诊断性能瓶颈
- ac可以指定线程数, an可以指定跑多少次 ，输出如下 
- ```bash
- ./gurl -ac 10 -an 1000000 -F text=good  -bench http://127.0.0.1:12346 
- 
-    Benchmarking 127.0.0.1 (be patient)
-    Completed 100000 requests
-    Completed 200000 requests
-    Completed 300000 requests
-    Completed 400000 requests
-    Completed 500000 requests
-    Completed 600000 requests
-    Completed 700000 requests
-    Completed 800000 requests
-    Completed 900000 requests
-    Completed 1000000 requests
-    Finished 1000000 requests
-    
-    
-    Server Software:        gnc
-    Server Hostname:        
-    Server Port:            12346
-    
-    Document Path:          
-    Document Length:        0 bytes
-    
-    Concurrency Level:      10
-    Time taken for tests:   35.293 seconds
-    Complete requests:      1000000
-    Failed requests:        0
-    Total transferred:      131000000 bytes
-    HTML transferred:       0 bytes
-    Requests per second:    28334.54 [#/sec] (mean)
-    Time per request:       0.353 [ms] (mean)
-    Time per request:       0.035 [ms] (mean, across all concurrent requests)
-    Transfer rate:          3711.83 [Kbytes/sec] received
-    Percentage of the requests served within a certain time (ms)
-      50%    0
-      66%    0
-      75%    0
-      80%    0
-      90%    0
-      95%    0
-      98%    1
-      99%    1
-     100%    14
-
- ```
- 使用-bench 选项打开bench(压测)模式, -rate 指定每秒写多少条消息
+#### 命令行选项
+```console
+Usage of ./gurl:
+  -A, --user-agent string
+        Send User-Agent STRING to server (default "gurl")
+  -F, --form string[]
+        Specify HTTP multipart POST data (H)
+  -H, --header string[]
+        Pass custom header LINE to server (H)
+  -J string[]
+        Turn key:value into {"key": "value"})
+  -Jfa string[]
+        Specify HTTP multipart POST json data (H)
+  -K, --config string
+        lua script
+  -X, --request string
+        Specify request command to use
+  -ac int
+        Number of multiple requests to make (default 1)
+  -an int
+        Number of requests to perform (default 1)
+  -bench
+        Run benchmarks test
+  -conns int
+        Max open idle connections per target host (default 10000)
+  -cpus int
+        Number of CPUs to use
+  -cron string
+        Cron expression
+  -d, --data string
+        HTTP POST data
+  -duration string
+        Duration of the test
+  -echo string
+        HTTP echo server
+  -gen
+        Generate the default lua script
+  -kargs string
+        Command line parameters passed to the configuration file
+  -o, --output string
+        Write to FILE instead of stdout (default "stdout")
+  -oflag string
+        Control the way you write(append|line|trunc)
+  -rate int
+        Requests per second
+  -url string
+        Specify a URL to fetch
+  -v, --verbose
+        Make the operation more talkative
 ```
-    ./gurl -bench -ac 10 -an 3000 -rate 3000 :1234
+##### `-F 或 --form`
+设置form表单, 比如-F text=文本内容，或者-F text=@./从文件里面读取, -F 选项的语义和curl命令一样
+
+##### `-ac`
+指定线程数
+
+##### `-an`
+指定次数
+
+##### `-bench`
+压测模式，可以对http服务端进行压测，可以和-ac, -an, -duration, -rate 选项配合使用
+ ```bash
     Benchmarking 127.0.0.1 (be patient)
-    Completed     300 requests [2018-08-09 21:43:20.643]
-    Completed     600 requests [2018-08-09 21:43:20.743]
-    Completed     900 requests [2018-08-09 21:43:20.843]
-    Completed    1200 requests [2018-08-09 21:43:20.943]
-    Completed    1500 requests [2018-08-09 21:43:21.043]
-    Completed    1800 requests [2018-08-09 21:43:21.143]
-    Completed    2100 requests [2018-08-09 21:43:21.243]
-    Completed    2400 requests [2018-08-09 21:43:21.343]
-    Completed    2700 requests [2018-08-09 21:43:21.443]
-    Completed    3000 requests [2018-08-09 21:43:21.543]
-    Finished 3000 requests
+      Completed          100000 requests [2018-08-11 21:58:56.143]
+      Completed          200000 requests [2018-08-11 21:59:00.374]
+      Completed          300000 requests [2018-08-11 21:59:03.703]
+      Completed          400000 requests [2018-08-11 21:59:06.559]
+      Completed          500000 requests [2018-08-11 21:59:09.201]
+      Completed          600000 requests [2018-08-11 21:59:11.757]
+      Completed          700000 requests [2018-08-11 21:59:14.218]
+      Completed          800000 requests [2018-08-11 21:59:16.639]
+      Completed          900000 requests [2018-08-11 21:59:19.061]
+      Completed         1000000 requests [2018-08-11 21:59:21.451]
+      Finished          1000000 requests
 
 
     Server Software:        gurl-server
@@ -102,40 +110,87 @@ env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
     Document Path:          
     Document Length:        0 bytes
 
-    Status Codes:           200:3000  [code:count]
+    Status Codes:           200:1000000  [code:count]
     Concurrency Level:      10
-    Time taken for tests:   1.000 seconds
-    Complete requests:      3000
+    Time taken for tests:   28.807 seconds
+    Complete requests:      1000000
     Failed requests:        0
-    Total transferred:      411000 bytes
+    Total transferred:      137000000 bytes
     HTML transferred:       0 bytes
-    Requests per second:    2999.41 [#/sec] (mean)
-    Time per request:       3.334 [ms] (mean)
-    Time per request:       0.333 [ms] (mean, across all concurrent requests)
-    Transfer rate:          410.92 [Kbytes/sec] received
+    Requests per second:    34713.37 [#/sec] (mean)
+    Time per request:       0.288 [ms] (mean)
+    Time per request:       0.029 [ms] (mean, across all concurrent requests)
+    Transfer rate:          4755.73 [Kbytes/sec] received
     Percentage of the requests served within a certain time (ms)
-      50%    0
-      66%    0
-      75%    0
-      80%    0
-      90%    0
-      95%    0
-      98%    0
-      99%    0
-     100%    7
+      50%    0.21ms
+      66%    0.31ms
+      75%    0.38ms
+      80%    0.42ms
+      90%    0.57ms
+      95%    0.66ms
+      98%    0.79ms
+      99%    0.89ms
+     100%    16.45ms
 
+ ```
+
+##### `-duration`
+和-bench选项一起使用，可以控制压测时间，支持单位符,s(秒), m(分), h(小时), d(天), w(周), M(月), y(年)  
+也可以混合使用 -duration 1m10s
+
+##### `-rate`
+指定每秒写多少条，目前只有打开-bench选项才起作用
 ```
-  * 管道模式
-  ```bash
+Benchmarking 127.0.0.1 (be patient)
+  Completed             300 requests [2018-08-11 22:02:01.625]
+  Completed             600 requests [2018-08-11 22:02:01.725]
+  Completed             900 requests [2018-08-11 22:02:01.825]
+  Completed            1200 requests [2018-08-11 22:02:01.925]
+  Completed            1500 requests [2018-08-11 22:02:02.025]
+  Completed            1800 requests [2018-08-11 22:02:02.125]
+  Completed            2100 requests [2018-08-11 22:02:02.225]
+  Completed            2400 requests [2018-08-11 22:02:02.325]
+  Completed            2700 requests [2018-08-11 22:02:02.425]
+  Completed            3000 requests [2018-08-11 22:02:02.525]
+  Finished             3000 requests
+
+
+Server Software:        gurl-server
+Server Hostname:        
+Server Port:            1234
+
+Document Path:          
+Document Length:        0 bytes
+
+Status Codes:           200:3000  [code:count]
+Concurrency Level:      10
+Time taken for tests:   1.000 seconds
+Complete requests:      3000
+Failed requests:        0
+Total transferred:      411000 bytes
+HTML transferred:       0 bytes
+Requests per second:    3000.08 [#/sec] (mean)
+Time per request:       3.333 [ms] (mean)
+Time per request:       0.333 [ms] (mean, across all concurrent requests)
+Transfer rate:          411.01 [Kbytes/sec] received
+Percentage of the requests served within a certain time (ms)
+  50%    0.17ms
+  66%    0.18ms
+  75%    0.18ms
+  80%    0.19ms
+  90%    0.21ms
+  95%    0.23ms
+  98%    0.26ms
+  99%    0.31ms
+ 100%    1.34ms
+```
+##### `|`
+管道模式, 主要为了串联多个lua脚本而设计，第1个脚本的输出，变成第2个脚本的输入
+```bash
  ./gurl -an 1 -K ./producer.lua -kargs "-l all.txt" "|" -an 0 -ac 12 -K ./http_slice.lua -kargs "-appkey xx -url http://192.168.6.128:24990/asr/pcm " "|" -an 0 -K ./write_file.lua -kargs "-f asr.result"
-  ```
-  * 发送multipart格式到服务端
-  ```bash
-  # 1.发送字符串test到服务端
-  ./gurl -F text="test" http://xxx.xxx.xxx.xxx:port
-  # 2.打开名为file的文件，并用其内容发送到服务端
-  ./gurl -F text="@./file" http://xxx.xxx.xxx.xxx:port
-  ```
+```
+
+
   * 发送http body数据到服务端
   ```bash
   # 1.发送字符串test到服务端
