@@ -10,17 +10,11 @@ gurl 是使用curl过程中的痛点改进。gurl实现了本人经常使用的c
 
 #### 功能
 * 支持curl常用命令行选项
-* 支持ab统计报表，并且性能比ab命令更高，每秒可以压测更多消息数
+* 支持压测模式，可以根据并发数和线程数，也可以根据持续时间，也可以指定每秒并发数压测http服务
 * 定时运行gurl(支持cron表达式)
 * 支持lua语言作为配置文件(可以写if, else, for, func)
 * url 支持简写
 * 支持管道模式
-
-#### 推荐的使用流程
-1. 使用gurl命令行选项调通功能，很多用户经过这一步就完成了任务
-1. 如果命令行里面有难以记忆的部分，并且也需要经常使用它，可使用gurl -gen &>demo.lua 命令保存到文件里
-2. gurl -K demo.lua根据配置文件里面的数据访问服务端
-3. 如果要修改demo.lua，也不熟悉配置文件的写法，可以通过./gurl -K demo.lua -gen 命令把demo.lua的数据转成命令行，然后重复第1步操作
 
 #### install
 ```bash
@@ -81,7 +75,10 @@ Usage of ./gurl:
 设置form表单, 比如-F text=文本内容，或者-F text=@./从文件里面读取, -F 选项的语义和curl命令一样
 
 ##### `-ac`
-指定线程数
+指定线程数, 开ac个线程, 发送an个请求
+```bash
+./gurl -an 10 -ac 2 -F text=good :1234
+```
 
 ##### `-an`
 指定次数
@@ -190,16 +187,17 @@ Percentage of the requests served within a certain time (ms)
  ./gurl -an 1 -K ./producer.lua -kargs "-l all.txt" "|" -an 0 -ac 12 -K ./http_slice.lua -kargs "-appkey xx -url http://192.168.6.128:24990/asr/pcm " "|" -an 0 -K ./write_file.lua -kargs "-f asr.result"
 ```
 
-
-  * 发送http body数据到服务端
-  ```bash
-  # 1.发送字符串test到服务端
+##### `-d 或 --data`
+发送http body数据到服务端, 支持@符号打开一个文件, 如果不接@直接把-d后面字符串发送到服务端
+```bash
   gurl -d "good" :12345
-  # 2.打开为file的文件，并用其内容发送到服务端
   gurl -d "@./file" :12345
-  ```
-  * 发送json格式数据到服务端
-  ```bash
+```
+
+##### `-J`
+-J 后面的key和value 会被组装成json字符串发送到服务端. key:value，其中value会被解释成字符串, key:=value，value会被解决成bool或者数字或者小数
+  * 普通用法
+```bash
   ./gurl -J username:admin -J passwd:123456 -J bool_val:=true  -J int_val:=3 -J float_val:=0.3 http://127.0.0.1:12345
   {
     "bool_val": true,
@@ -208,20 +206,8 @@ Percentage of the requests served within a certain time (ms)
     "passwd": "123456",
     "username": "admin"
   }
-
-  ```
-  * 如果key:value的数据是从文件或者终端里面读取，可以使用下面的方面转成json格式发给服务端
-  ```bash
-  echo "username:admin passwd:123456 bool_val:=true int_val:=3 float_val:=0.3"|xargs -d' ' -I {} echo -J {}|xargs ./gurl -url :12345
-  {
-    "bool_val": true,
-    "float_val": 0.3,
-    "int_val": 3,
-    "passwd": "123456",
-    "username": "admin"
-  }
-  ```
-  * 发送多层json格式数据到服务端
+```
+  * 嵌套用法
   ```bash
   ./gurl -J a.b.c.d:=true -J a.b.c.e:=111 http://127.0.0.1:12345
   {
@@ -234,62 +220,73 @@ Percentage of the requests served within a certain time (ms)
       }
     }
   }
-
   ```
-  * 向multipart字段中插入json数据
-  ```bash
-  ./gurl -Jfa text=DisplayText:good -Jfa text=Language:cn -Jfa text2=look:me -F text=good :12345
 
-  --4361c4e6ae1b083e9e0508a7b40eb215bccd265c4bed00137cc7d112e890
-  Content-Disposition: form-data; name="text"
+##### `-Jfa`
+向multipart字段中插入json数据
+```bash
+./gurl -Jfa text=DisplayText:good -Jfa text=Language:cn -Jfa text2=look:me -F text=good :12345
 
-  {"DisplayText":"good","Language":"cn"}
-  --4361c4e6ae1b083e9e0508a7b40eb215bccd265c4bed00137cc7d112e890
-  Content-Disposition: form-data; name="text2"
+--4361c4e6ae1b083e9e0508a7b40eb215bccd265c4bed00137cc7d112e890
+Content-Disposition: form-data; name="text"
 
-  {"look":"me"}
-  --4361c4e6ae1b083e9e0508a7b40eb215bccd265c4bed00137cc7d112e890
-  Content-Disposition: form-data; name="text"
+{"DisplayText":"good","Language":"cn"}
+--4361c4e6ae1b083e9e0508a7b40eb215bccd265c4bed00137cc7d112e890
+Content-Disposition: form-data; name="text2"
 
-  good
-  --4361c4e6ae1b083e9e0508a7b40eb215bccd265c4bed00137cc7d112e890--
-  ```
-  * 开ac个线程, 发送an个请求
-  ```bash
-  ./gurl -an 10 -ac 2 -F text=good :1234
-  ```
-  * 指定多个http header
-  ```bash
-  ./gurl -H "header1:value1" -H "header2:value2" http://xxx.xxx.xxx.xxx:port
-  ```
-  * 定时发送(每隔一秒从服务里取结果)
-  ```bash
-  ./gurl -cron "@every 1s" -H "session-id:f0c371f1-f418-477c-92d4-129c16c8e4d5" http://127.0.0.1:12345/asr/result
-  ```
-  * url支持简写种类
-    * -url http://127.0.0.1:1234 --> 127.0.0.1:1234
-    * -url http://127.0.0.1:1234 --> :1234
-    * -url http://127.0.0.1/path --> /path
+{"look":"me"}
+--4361c4e6ae1b083e9e0508a7b40eb215bccd265c4bed00137cc7d112e890
+Content-Disposition: form-data; name="text"
 
-  * -oflag 一般和-o选项配合使用(控制写文件的行为)
-    * -oflag append 默认-o的行为是新建文件然后写入，如果开启-ac -an选项，可以使用append肥所有的结果保存到一个文件中
-    * -oflag line 如果服务端返回的结果，想使用换行符分隔  
-    小提示: -oflag 后面的命令可以组合使用 "append|line"的意思是：把服务端的输出追加到某个文本中，并用'\n'分隔符
- * 配置文件
-   * 从命令行的数据生成配置文件(选项 -gen)
-  ```lua
-  ./gurl -X POST -F mode=A -F text=good -F voice=@./good.opus -url http://127.0.0.1:24909/eval/opus -gen &>demo.lua 
+good
+--4361c4e6ae1b083e9e0508a7b40eb215bccd265c4bed00137cc7d112e890--
+```
 
-  #todo
+##### `-H 或者 --header`
+设置http 头，可以指定多个
+```bash
+./gurl -H "header1:value1" -H "header2:value2" http://xxx.xxx.xxx.xxx:port
+```
 
-  ```
-  * 把配置文件转成命令行形式(选项-gen -K 配置文件)
-  ```bash
-  ./gurl -K demo.lua -gen
-  gurl -X POST -F mode=A -F text=good -F voice=@./good.opus -url http://127.0.0.1:24909/eval/opus
-  ```
-#### 高级用法
-高级用法主要讲如何使用gurl内置的lua函数，以下代码都可以通过-K 选项执行，-karg "这里是从给脚本的命令行参数"
+##### `-cron`
+定时发送(每隔一秒从服务里取结果)
+```bash
+./gurl -cron "@every 1s" -H "session-id:f0c371f1-f418-477c-92d4-129c16c8e4d5" http://127.0.0.1:12345/asr/result
+```
+
+##### `-url`
+* -url http://127.0.0.1:1234 --> 127.0.0.1:1234
+* -url http://127.0.0.1:1234 --> :1234
+* -url http://127.0.0.1/path --> /path
+
+
+##### `-oflag`
+-oflag 一般和-o选项配合使用(控制写文件的行为)
+* -oflag append 默认-o的行为是新建文件然后写入，如果开启-ac -an选项，可以使用append肥所有的结果保存到一个文件中
+* -oflag line 如果服务端返回的结果，想使用换行符分隔  
+小提示: -oflag 后面的命令可以组合使用 "append|line"的意思是：把服务端的输出追加到某个文本中，并用'\n'分隔符
+
+##### `-gen`
+* 从命令行的数据生成配置文件(选项 -gen)
+```lua
+./gurl -X POST -F mode=A -F text=good -F voice=@./good.opus -url http://127.0.0.1:24909/eval/opus -gen &>demo.lua 
+
+#todo
+
+```
+* 把配置文件转成命令行形式(选项-gen -K 配置文件)
+```bash
+./gurl -K demo.lua -gen
+gurl -X POST -F mode=A -F text=good -F voice=@./good.opus -url http://127.0.0.1:24909/eval/opus
+```
+
+#### `-K`
+-K选项可以执行lua script，有关lua的用法，可以搜索下。
+
+#### `-kargs`
+该命令选选项主要从命令行传递参数给lua script
+
+下而的example讲如何使用gurl内置的lua函数，以下代码都可以通过-K 选项执行，-kargs "这里是从给脚本的命令行参数"
 * 在配置文件里面解析命令行配置
 ```lua
     local cmd = require("cmd")
@@ -354,10 +351,11 @@ Percentage of the requests served within a certain time (ms)
 * sleep
 ```lua
     local time = require("time")
-    time.sleep(250, "ms")
-    time.sleep(1, "s")
-    time.sleep(1, "m")
-    time.sleep(1, "h")
+    time.sleep("250ms")
+    time.sleep("1s")
+    time.sleep("1m")
+    time.sleep("1h")
+    time.sleep("1s250ms")
 ```
 #### TODO
 * bugfix
