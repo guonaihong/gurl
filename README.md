@@ -23,7 +23,7 @@ env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
 
 #### 命令行选项
 ```console
-Usage of ./gurl:
+Usage of gurl:
   -A, --user-agent string
         Send User-Agent STRING to server (default "gurl")
   -F, --form string[]
@@ -33,6 +33,8 @@ Usage of ./gurl:
   -J string[]
         Turn key:value into {"key": "value"})
   -Jfa string[]
+        Specify HTTP multipart POST json data (H)
+  -Jfa-string string[]
         Specify HTTP multipart POST json data (H)
   -K, --config string
         lua script
@@ -56,6 +58,8 @@ Usage of ./gurl:
         Duration of the test
   -echo string
         HTTP echo server
+  -form-string string[]
+        Specify HTTP multipart POST data (H)
   -gen
         Generate the default lua script
   -kargs string
@@ -73,6 +77,8 @@ Usage of ./gurl:
 ```
 ##### `-F 或 --form`
 设置form表单, 比如-F text=文本内容，或者-F text=@./从文件里面读取, -F 选项的语义和curl命令一样
+##### `--form-string`
+和-F 或--form类似，不解释@符号，原样传递到服务端
 
 ##### `-ac`
 指定线程数, 开ac个线程, 发送an个请求
@@ -241,6 +247,8 @@ Content-Disposition: form-data; name="text"
 good
 --4361c4e6ae1b083e9e0508a7b40eb215bccd265c4bed00137cc7d112e890--
 ```
+##### `-Jfa-string`
+和-Jfa语法类似，不解析@符号
 
 ##### `-H 或者 --header`
 设置http 头，可以指定多个

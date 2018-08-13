@@ -411,7 +411,9 @@ func gurlMain(message gurlib.Message, argv0 string, argv []string) {
 
 	headers := commandlLine.StringSlice("H, header", []string{}, "Pass custom header LINE to server (H)")
 	forms := commandlLine.StringSlice("F, form", []string{}, "Specify HTTP multipart POST data (H)")
+	formStrings := commandlLine.StringSlice("form-string", []string{}, "Specify HTTP multipart POST data (H)")
 	jfa := commandlLine.StringSlice("Jfa", []string{}, "Specify HTTP multipart POST json data (H)")
+	jfaStrings := commandlLine.StringSlice("Jfa-string", []string{}, "Specify HTTP multipart POST json data (H)")
 	cronExpr := commandlLine.String("cron", "", "Cron expression")
 	conf := commandlLine.String("K, config", "", "lua script")
 	kargs := commandlLine.String("kargs", "", "Command line parameters passed to the configuration file")
@@ -487,6 +489,9 @@ func gurlMain(message gurlib.Message, argv0 string, argv []string) {
 			A:      *agent,
 		},
 	}
+
+	g.AddFormStr(*formStrings)
+	g.AddJsonFormStr(*jfaStrings)
 
 	if *gen {
 		if len(*conf) > 0 {

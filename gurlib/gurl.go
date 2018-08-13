@@ -41,10 +41,53 @@ type GurlCore struct {
 	Flag       int
 	V          bool `json:"-"`
 	A          string
-	NotParseAt bool
+	NotParseAt map[string]struct{}
 }
 
-func parseVal(bodyJson map[string]interface{}, key, val string) {
+func (g *GurlCore) AddFormStr(F []string) {
+	if len(F) == 0 {
+		return
+	}
+
+	if g.NotParseAt == nil {
+		g.NotParseAt = make(map[string]struct{}, 10)
+	}
+
+	oldLen := len(g.F)
+	for i := 0; i < len(F); i++ {
+		g.NotParseAt["F"+fmt.Sprintf("%d", oldLen+i)] = struct{}{}
+	}
+
+	g.F = append(g.F, F...)
+}
+
+func (g *GurlCore) AddJsonFormStr(Jfa []string) {
+	if len(Jfa) == 0 {
+		return
+	}
+
+	if g.NotParseAt == nil {
+		g.NotParseAt = make(map[string]struct{}, 10)
+	}
+	oldLen := len(g.Jfa)
+	for i := 0; i < len(Jfa); i++ {
+		g.NotParseAt["Jfa"+fmt.Sprintf("%d", oldLen+i)] = struct{}{}
+	}
+
+	g.Jfa = append(g.Jfa, Jfa...)
+}
+
+func (g *GurlCore) formNotParseAt(idx int) bool {
+	_, ok := g.NotParseAt[fmt.Sprintf("F%d", idx)]
+	return ok
+}
+
+func (g *GurlCore) jsonFormNotParseAt(idx int) bool {
+	_, ok := g.NotParseAt[fmt.Sprintf("Jfa%d", idx)]
+	return ok
+}
+
+func parseVal(bodyJson map[string]interface{}, key, val string, notParseAt bool) {
 	if val == "{}" {
 		bodyJson[key] = map[string]interface{}{}
 		return
@@ -68,15 +111,15 @@ func parseVal(bodyJson map[string]interface{}, key, val string) {
 		return
 	}
 
-	bodyJson[key] = val
+	bodyJson[key] = parseAt(val, notParseAt)
 }
 
-func parseVal2(bodyJson map[string]interface{}, key, val string) {
-	bodyJson[key] = val
+func parseVal2(bodyJson map[string]interface{}, key, val string, notParseAt bool) {
+	bodyJson[key] = parseAt(val, notParseAt)
 }
 
-func toJson(J []string, bodyJson map[string]interface{}) {
-	for _, v := range J {
+func toJson(J []string, notParseAt []bool, bodyJson map[string]interface{}) {
+	for j, v := range J {
 		pos := strings.Index(v, ":")
 		if pos == -1 {
 			bodyJson[v] = ""
@@ -86,13 +129,18 @@ func toJson(J []string, bodyJson map[string]interface{}) {
 		key := v[:pos]
 		val := v[pos+1:]
 
+		notParseAt2 := false
+		if len(notParseAt) > 0 {
+			notParseAt2 = notParseAt[j]
+		}
+
 		if pos := strings.Index(key, "."); pos != -1 {
 			keys := strings.Split(key, ".")
 
-			parseValCb := parseVal2
+			parseValfn := parseVal2
 			if strings.HasPrefix(val, "=") {
 				val = val[1:]
-				parseValCb = parseVal
+				parseValfn = parseVal
 			}
 
 			type jsonObj map[string]interface{}
@@ -101,7 +149,7 @@ func toJson(J []string, bodyJson map[string]interface{}) {
 
 			for i, v := range keys {
 				if len(keys)-1 == i {
-					parseValCb(curMap, v, val)
+					parseValfn(curMap, v, val, notParseAt2)
 					break
 				}
 
@@ -118,12 +166,12 @@ func toJson(J []string, bodyJson map[string]interface{}) {
 		}
 
 		if len(val) == 0 {
-			bodyJson[key] = ""
+			parseVal2(bodyJson, key, "", notParseAt2)
 			continue
 		}
 
 		if val[0] != '=' {
-			bodyJson[key] = val
+			parseVal2(bodyJson, key, val, notParseAt2)
 			continue
 		}
 
@@ -132,7 +180,7 @@ func toJson(J []string, bodyJson map[string]interface{}) {
 		}
 
 		val = val[1:]
-		parseVal(bodyJson, key, val)
+		parseVal(bodyJson, key, val, notParseAt2)
 
 	}
 }
@@ -142,7 +190,7 @@ func (g *GurlCore) form(F []string, fm *[]FormVal) {
 	fileds := [2]string{}
 	formVals := []FormVal{}
 
-	for _, v := range F {
+	for k, v := range F {
 
 		fileds[0], fileds[1] = "", ""
 
@@ -153,7 +201,7 @@ func (g *GurlCore) form(F []string, fm *[]FormVal) {
 
 		fileds[0], fileds[1] = v[:pos], v[pos+1:]
 
-		if !g.NotParseAt && strings.HasPrefix(fileds[1], "@") {
+		if !g.formNotParseAt(k) && strings.HasPrefix(fileds[1], "@") {
 			fname := fileds[1][1:]
 
 			fd, err := os.Open(fname)
@@ -179,13 +227,14 @@ func (g *GurlCore) form(F []string, fm *[]FormVal) {
 	*fm = append(*fm, formVals...)
 }
 
-func jsonFromAppend(JF []string, fm *[]FormVal) {
+func (g *GurlCore) jsonFromAppend(JF []string, fm *[]FormVal) {
 
 	JFMap := map[string][]string{}
+	notParseAt := map[string][]bool{}
 	fileds := [2]string{}
 	formVals := []FormVal{}
 
-	for _, v := range JF {
+	for i, v := range JF {
 
 		fileds[0], fileds[1] = "", ""
 
@@ -198,13 +247,15 @@ func jsonFromAppend(JF []string, fm *[]FormVal) {
 
 		v, _ := JFMap[fileds[0]]
 		JFMap[fileds[0]] = append(v, fileds[1])
+		notParseAt[fileds[0]] = append(notParseAt[fileds[0]], g.jsonFormNotParseAt(i))
+
 	}
 
 	for k, v := range JFMap {
 
 		bodyJson := map[string]interface{}{}
 
-		toJson(v, bodyJson)
+		toJson(v, notParseAt[k], bodyJson)
 
 		body, err := json.Marshal(&bodyJson)
 
@@ -217,6 +268,18 @@ func jsonFromAppend(JF []string, fm *[]FormVal) {
 	}
 
 	*fm = append(*fm, formVals...)
+}
+
+func parseAt(data string, notParseAt bool) string {
+	if !notParseAt && strings.HasPrefix(data, "@") {
+		body, err := ioutil.ReadFile(data[1:])
+		if err != nil {
+			log.Fatalf("%v\n", err)
+			return ""
+		}
+		return string(body)
+	}
+	return data
 }
 
 func ParseBody(Body *[]byte) {
@@ -240,7 +303,7 @@ func (g *GurlCore) ParseInit() {
 	if len(g.J) > 0 {
 		bodyJson := map[string]interface{}{}
 
-		toJson(g.J, bodyJson)
+		toJson(g.J, nil, bodyJson)
 
 		body, err := json.Marshal(&bodyJson)
 		if err != nil {
@@ -254,7 +317,7 @@ func (g *GurlCore) ParseInit() {
 	//g.FormCache = []FormVal{}
 
 	if len(g.Jfa) > 0 {
-		jsonFromAppend(g.Jfa, &g.FormCache)
+		g.jsonFromAppend(g.Jfa, &g.FormCache)
 	}
 
 	if len(g.F) > 0 {
