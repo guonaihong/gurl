@@ -14,87 +14,195 @@ Gurl is a pain point in the process of using curl.Gurl implements curl command l
 - Url support abbreviations
 - Support pipeline mode
 
-#### Recommended use process
-1、Using the gurl command line option to enable the function, many users complete the task after this step.
-2、If there is a hard-to-remember part of the command line and you need to use it often, save it to a file using the gurl -gen &>demo.lua command.
-3、gurl -K demo.lua accesses the server based on the data in the configuration file.
-4、If you want to modify demo.lua and you are not familiar with the configuration of the configuration file, you can use the ./gurl -K demo.lua -gen command to convert the demo.lua data to the command line, and then repeat step 1. operating.
-
 #### install
 ```bash
 env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
 ```
 
-#### examples
-* Command Line
- * bench
- Use the "-bench" option to turn on the benchmark mode to test the server and diagnose performance bottlenecks. The output is as follows
+#### usage
+```console
+Usage of gurl:
+  -A, --user-agent string
+        Send User-Agent STRING to server (default "gurl")
+  -F, --form string[]
+        Specify HTTP multipart POST data (H)
+  -H, --header string[]
+        Pass custom header LINE to server (H)
+  -J string[]
+        Turn key:value into {"key": "value"})
+  -Jfa string[]
+        Specify HTTP multipart POST json data (H)
+  -Jfa-string string[]
+        Specify HTTP multipart POST json data (H)
+  -K, --config string
+        lua script
+  -X, --request string
+        Specify request command to use
+  -ac int
+        Number of multiple requests to make (default 1)
+  -an int
+        Number of requests to perform (default 1)
+  -bench
+        Run benchmarks test
+  -conns int
+        Max open idle connections per target host (default 10000)
+  -cpus int
+        Number of CPUs to use
+  -cron string
+        Cron expression
+  -d, --data string
+        HTTP POST data
+  -duration string
+        Duration of the test
+  -echo string
+        HTTP echo server
+  -form-string string[]
+        Specify HTTP multipart POST data (H)
+  -gen
+        Generate the default lua script
+  -kargs string
+        Command line parameters passed to the configuration file
+  -o, --output string
+        Write to FILE instead of stdout (default "stdout")
+  -oflag string
+        Control the way you write(append|line|trunc)
+  -rate int
+        Requests per second
+  -url string
+        Specify a URL to fetch
+  -v, --verbose
+        Make the operation more talkative
+```
+
+##### `-F 或 --form`
+Set the form form, such as -F text=text content, or -F text=@./read from the file, the semantics of the -F option are the same as the curl command
+##### `--form-string`
+Similar to -F or --form, without interpreting the @symbol, passed to the server as it is
+
+##### `-ac`
+Specify the number of threads, open ac threads, send an request
+```bash
+./gurl -an 10 -ac 2 -F text=good :1234
+```
+
+##### `-an`
+Specified number
+
+##### `-bench`
+In the pressure test mode, the http server can be pressed and used with the -ac, -an, -duration, -rate option.
  ```bash
- ./gurl -ac 10 -an 1000000 -F text=good  -bench http://127.0.0.1:12346 
- 
     Benchmarking 127.0.0.1 (be patient)
-    Completed 100000 requests
-    Completed 200000 requests
-    Completed 300000 requests
-    Completed 400000 requests
-    Completed 500000 requests
-    Completed 600000 requests
-    Completed 700000 requests
-    Completed 800000 requests
-    Completed 900000 requests
-    Completed 1000000 requests
-    Finished 1000000 requests
-    
-    
-    Server Software:        gnc
+      Completed          100000 requests [2018-08-11 21:58:56.143]
+      Completed          200000 requests [2018-08-11 21:59:00.374]
+      Completed          300000 requests [2018-08-11 21:59:03.703]
+      Completed          400000 requests [2018-08-11 21:59:06.559]
+      Completed          500000 requests [2018-08-11 21:59:09.201]
+      Completed          600000 requests [2018-08-11 21:59:11.757]
+      Completed          700000 requests [2018-08-11 21:59:14.218]
+      Completed          800000 requests [2018-08-11 21:59:16.639]
+      Completed          900000 requests [2018-08-11 21:59:19.061]
+      Completed         1000000 requests [2018-08-11 21:59:21.451]
+      Finished          1000000 requests
+
+
+    Server Software:        gurl-server
     Server Hostname:        
-    Server Port:            12346
-    
+    Server Port:            1234
+
     Document Path:          
     Document Length:        0 bytes
-    
+
+    Status Codes:           200:1000000  [code:count]
     Concurrency Level:      10
-    Time taken for tests:   35.293 seconds
+    Time taken for tests:   28.807 seconds
     Complete requests:      1000000
     Failed requests:        0
-    Total transferred:      131000000 bytes
+    Total transferred:      137000000 bytes
     HTML transferred:       0 bytes
-    Requests per second:    28334.54 [#/sec] (mean)
-    Time per request:       0.353 [ms] (mean)
-    Time per request:       0.035 [ms] (mean, across all concurrent requests)
-    Transfer rate:          3711.83 [Kbytes/sec] received
+    Requests per second:    34713.37 [#/sec] (mean)
+    Time per request:       0.288 [ms] (mean)
+    Time per request:       0.029 [ms] (mean, across all concurrent requests)
+    Transfer rate:          4755.73 [Kbytes/sec] received
     Percentage of the requests served within a certain time (ms)
-      50%    0
-      66%    0
-      75%    0
-      80%    0
-      90%    0
-      95%    0
-      98%    1
-      99%    1
-     100%    14
+      50%    0.21ms
+      66%    0.31ms
+      75%    0.38ms
+      80%    0.42ms
+      90%    0.57ms
+      95%    0.66ms
+      98%    0.79ms
+      99%    0.89ms
+     100%    16.45ms
 
  ```
-  * Pipe mode
-  ```bash
+
+##### `-duration`
+Used with the -bench option to control the press time, support unit, s (seconds), m (minutes), h (hours), d (days), w (weeks), M (months), y (years) )
+Can also be mixed -duration 1m10s
+
+##### `-rate`
+Specify how many times to write per second, currently only open the -bench option to work
+```
+Benchmarking 127.0.0.1 (be patient)
+  Completed             300 requests [2018-08-11 22:02:01.625]
+  Completed             600 requests [2018-08-11 22:02:01.725]
+  Completed             900 requests [2018-08-11 22:02:01.825]
+  Completed            1200 requests [2018-08-11 22:02:01.925]
+  Completed            1500 requests [2018-08-11 22:02:02.025]
+  Completed            1800 requests [2018-08-11 22:02:02.125]
+  Completed            2100 requests [2018-08-11 22:02:02.225]
+  Completed            2400 requests [2018-08-11 22:02:02.325]
+  Completed            2700 requests [2018-08-11 22:02:02.425]
+  Completed            3000 requests [2018-08-11 22:02:02.525]
+  Finished             3000 requests
+
+
+Server Software:        gurl-server
+Server Hostname:        
+Server Port:            1234
+
+Document Path:          
+Document Length:        0 bytes
+
+Status Codes:           200:3000  [code:count]
+Concurrency Level:      10
+Time taken for tests:   1.000 seconds
+Complete requests:      3000
+Failed requests:        0
+Total transferred:      411000 bytes
+HTML transferred:       0 bytes
+Requests per second:    3000.08 [#/sec] (mean)
+Time per request:       3.333 [ms] (mean)
+Time per request:       0.333 [ms] (mean, across all concurrent requests)
+Transfer rate:          411.01 [Kbytes/sec] received
+Percentage of the requests served within a certain time (ms)
+  50%    0.17ms
+  66%    0.18ms
+  75%    0.18ms
+  80%    0.19ms
+  90%    0.21ms
+  95%    0.23ms
+  98%    0.26ms
+  99%    0.31ms
+ 100%    1.34ms
+```
+##### `|`
+Pipeline mode, mainly designed to concatenate multiple lua scripts, the output of the first script becomes the input of the second script
+```bash
  ./gurl -an 1 -K ./producer.lua -kargs "-l all.txt" "|" -an 0 -ac 12 -K ./http_slice.lua -kargs "-appkey xx -url http://192.168.6.128:24990/asr/pcm " "|" -an 0 -K ./write_file.lua -kargs "-f asr.result"
-  ```
-  * Send multipart format to server
-  ```bash
-  # 1.Send the string “test” to the server
-  ./gurl -F text="test" http://xxx.xxx.xxx.xxx:port
-  # 2.Open the file named “file” and send it to the server with its contents
-  ./gurl -F text="@./file" http://xxx.xxx.xxx.xxx:port
-  ```
-  * Send http body data to server
-  ```bash
-  # 1.Send the string “test” to the server
+```
+
+##### `-d 或 --data`
+Send http body data to the server, support @symbol to open a file, if not @ directly send the string after -d to the server
+```bash
   gurl -d "good" :12345
-  # 2.Open the file named “file” and send it to the server with its contents
   gurl -d "@./file" :12345
-  ```
-  * Send json format data to server
-  ```bash
+```
+
+##### `-J`
+The key and value after -J will be assembled into a json string and sent to the server. key:value, where value will be interpreted as a string, key:=value, value will be resolved to bool or number or decimal
+  * Common usage
+```bash
   ./gurl -J username:admin -J passwd:123456 -J bool_val:=true  -J int_val:=3 -J float_val:=0.3 http://127.0.0.1:12345
   {
     "bool_val": true,
@@ -103,20 +211,8 @@ env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
     "passwd": "123456",
     "username": "admin"
   }
-
-  ```
-  * If the data of "key:value" is read from the file or the terminal, you can use the following aspects to send it to the server in json format.
-  ```bash
-  echo "username:admin passwd:123456 bool_val:=true int_val:=3 float_val:=0.3"|xargs -d' ' -I {} echo -J {}|xargs ./gurl -url :12345
-  {
-    "bool_val": true,
-    "float_val": 0.3,
-    "int_val": 3,
-    "passwd": "123456",
-    "username": "admin"
-  }
-  ```
-  * Send multi-layer json format data to server
+```
+  * Nested usage
   ```bash
   ./gurl -J a.b.c.d:=true -J a.b.c.e:=111 http://127.0.0.1:12345
   {
@@ -129,67 +225,76 @@ env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
       }
     }
   }
-
   ```
-  * Insert json data into the multipart field
 
-  ```bash
-  ./gurl -Jfa text=DisplayText:good -Jfa text=Language:cn -Jfa text2=look:me -F text=good :12345
+##### `-Jfa`
+Insert json data into the multipart field
+```bash
+./gurl -Jfa text=DisplayText:good -Jfa text=Language:cn -Jfa text2=look:me -F text=good :12345
 
-  --4361c4e6ae1b083e9e0508a7b40eb215bccd265c4bed00137cc7d112e890
-  Content-Disposition: form-data; name="text"
+--4361c4e6ae1b083e9e0508a7b40eb215bccd265c4bed00137cc7d112e890
+Content-Disposition: form-data; name="text"
 
-  {"DisplayText":"good","Language":"cn"}
-  --4361c4e6ae1b083e9e0508a7b40eb215bccd265c4bed00137cc7d112e890
-  Content-Disposition: form-data; name="text2"
+{"DisplayText":"good","Language":"cn"}
+--4361c4e6ae1b083e9e0508a7b40eb215bccd265c4bed00137cc7d112e890
+Content-Disposition: form-data; name="text2"
 
-  {"look":"me"}
-  --4361c4e6ae1b083e9e0508a7b40eb215bccd265c4bed00137cc7d112e890
-  Content-Disposition: form-data; name="text"
+{"look":"me"}
+--4361c4e6ae1b083e9e0508a7b40eb215bccd265c4bed00137cc7d112e890
+Content-Disposition: form-data; name="text"
 
-  good
-  --4361c4e6ae1b083e9e0508a7b40eb215bccd265c4bed00137cc7d112e890--
-  ```
-  * Open "ac" threads, send "an" request
+good
+--4361c4e6ae1b083e9e0508a7b40eb215bccd265c4bed00137cc7d112e890--
+```
+##### `-Jfa-string`
+Similar to the -Jfa syntax, does not parse the @symbol
 
-  ```bash
-  ./gurl -an 10 -ac 2 -F text=good :1234
-  ```
-  * Specify multiple http headers
+##### `-H 或者 --header`
+Set http headers, you can specify multiple
+```bash
+./gurl -H "header1:value1" -H "header2:value2" http://xxx.xxx.xxx.xxx:port
+```
 
-  ```bash
-  ./gurl -H "header1:value1" -H "header2:value2" http://xxx.xxx.xxx.xxx:port
-  ```
-  * Send regularly (every second from the service)
+##### `-cron`
+Send regularly (take results from the service every second)
+```bash
+./gurl -cron "@every 1s" -H "session-id:f0c371f1-f418-477c-92d4-129c16c8e4d5" http://127.0.0.1:12345/asr/result
+```
 
-  ```bash
-  ./gurl -cron "@every 1s" -H "session-id:f0c371f1-f418-477c-92d4-129c16c8e4d5" http://127.0.0.1:12345/asr/result
-  ```
-  * Url supports abbreviated types
-    * -url http://127.0.0.1:1234 --> 127.0.0.1:1234
-    * -url http://127.0.0.1:1234 --> :1234
-    * -url http://127.0.0.1/path --> /path
+##### `-url`
+* -url http://127.0.0.1:1234 --> 127.0.0.1:1234
+* -url http://127.0.0.1:1234 --> :1234
+* -url http://127.0.0.1/path --> /path
 
-  * "-oflag" is generally used with the "-o" option (controls the behavior of writing files)
 
-    * -oflag append: the default behavior of "-o" is to create a new file and then write it. If the "-ac -an" option is enabled, you can use append to save all the results in a file.
-    * -oflag line: if the server returns a result, you want to use a line break to separate.  
-    Tips: Commands following "-oflag" can be combined,
-     "append|line" mean：Append the server's output to a text and use '\n' separator.
- * Profile
-   * Generate a configuration file from the command line data (option -gen)
+##### `-oflag`
+-oflag Generally used in conjunction with the -o option (controls the behavior of writing files)
+* -oflag append The default -o behavior is to create a new file and then write it. If you enable the -ac -an option, you can use append to save all the results to a file.
+* -oflag line If the server returns the result, I want to use a newline to separate
+Tip: The commands after -oflag can be combined with "append|line" to mean appending the output of the server to a text with the '\n' separator
 
-  ```lua
-  ./gurl -X POST -F mode=A -F text=good -F voice=@./good.opus -url http://127.0.0.1:24909/eval/opus -gen &>demo.lua 
+##### `-gen`
+* Generate a configuration file from the command line's data (option -gen)
+```lua
+./gurl -X POST -F mode=A -F text=good -F voice=@./good.opus -url http://127.0.0.1:24909/eval/opus -gen &>demo.lua 
 
-  ```
-  * Turn the configuration file into a command line (option -gen -K configuration file)
-  ```bash
-  ./gurl -K demo.lua -gen
-  gurl -X POST -F mode=A -F text=good -F voice=@./good.opus -url http://127.0.0.1:24909/eval/opus
-  ```
-#### Advanced usage
+#todo
 
+```
+* Convert the configuration file to the command line format (option -gen -K configuration file)
+```bash
+./gurl -K demo.lua -gen
+gurl -X POST -F mode=A -F text=good -F voice=@./good.opus -url http://127.0.0.1:24909/eval/opus
+```
+
+#### `-K`
+The -K option can execute lua script. For the usage of lua, you can search for it.
+
+#### `-kargs`
+This command option mainly passes parameters from the command line to lua script.
+
+The following example shows how to use gurl built-in lua function. The following code can be executed with the -K option, -kargs "here is the command line argument from the script"
+* Parse the command line configuration in the configuration file
 ```lua
     local cmd = require("cmd")
     local flag = cmd.new()
@@ -217,7 +322,7 @@ env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
     end
 
 ```
-* send http request
+* Send http request
 ```lua
     local http = require("http")
     local rsp = http.send({
@@ -253,11 +358,12 @@ env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
 * sleep
 ```lua
     local time = require("time")
-    time.sleep(250, "ms")
-    time.sleep(1, "s")
-    time.sleep(1, "m")
-    time.sleep(1, "h")
+    time.sleep("250ms")
+    time.sleep("1s")
+    time.sleep("1m")
+    time.sleep("1h")
+    time.sleep("1s250ms")
 ```
 #### TODO
 * bugfix
-* Add some very handy features
+* Some add with very handy features
