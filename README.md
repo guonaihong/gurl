@@ -92,6 +92,7 @@ Usage of gurl:
 ##### `-bench`
 压测模式，可以对http服务端进行压测，可以和-ac, -an, -duration, -rate 选项配合使用
  ```bash
+    gurl -bench -ac 25 -an 1000000 :1234
     Benchmarking 127.0.0.1 (be patient)
       Completed          100000 requests [2018-08-11 21:58:56.143]
       Completed          200000 requests [2018-08-11 21:59:00.374]
@@ -144,6 +145,7 @@ Usage of gurl:
 ##### `-rate`
 指定每秒写多少条，目前只有打开-bench选项才起作用
 ```
+gurl -bench -ac 25 -an 3000 -rate 3000 :1234
 Benchmarking 127.0.0.1 (be patient)
   Completed             300 requests [2018-08-11 22:02:01.625]
   Completed             600 requests [2018-08-11 22:02:01.725]
