@@ -5,6 +5,7 @@ import (
 
 	"github.com/guonaihong/glua/lib/cmdparse"
 	"github.com/guonaihong/glua/lib/json"
+	"github.com/guonaihong/glua/lib/log"
 	"github.com/guonaihong/glua/lib/strings"
 	"github.com/guonaihong/glua/lib/time"
 	"github.com/guonaihong/glua/lib/uuid"
@@ -24,6 +25,7 @@ func NewLuaEngine(client *http.Client) *LuaEngine {
 	L.PreloadModule("uuid", uuid.Loader)
 	L.PreloadModule("time", time.Loader)
 	L.PreloadModule("json", json.Loader)
+	L.PreloadModule("log", log.Loader)
 	L.PreloadModule("strings", strings.Loader)
 	//socket.RegisterSocketType(L)
 	return engine

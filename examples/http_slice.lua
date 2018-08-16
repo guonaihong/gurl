@@ -4,6 +4,7 @@ local time = require("time")
 local http = require("http")
 local json = require("json")
 local strings = require("strings")
+local log = require("log").new("debug")
 
 local flag = cmd.new()
 local opt = flag
@@ -55,7 +56,7 @@ function send_asr(config)
             if #rsp["body"] == 0 then
                 body = "{}"
             end
-            print(json.format(body))
+            log:debug(json.format(body), "\n")
         else
             print("error http code".. rsp["status_code"])
         end
