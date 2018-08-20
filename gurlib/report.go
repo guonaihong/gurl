@@ -215,6 +215,10 @@ func (r *Report) StartReport() {
 		} else {
 			begin := time.Now()
 			interval := r.duration / 10
+
+			if interval == 0 {
+				interval = time.Second
+			}
 			nTick := time.NewTicker(interval)
 			count := 1
 			for {

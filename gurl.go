@@ -76,6 +76,12 @@ func (cmd *GurlCmd) Cron(client *http.Client) {
 func (cmd *GurlCmd) Producer() {
 	work, n := cmd.work, cmd.n
 
+	if len(cmd.duration) > 0 {
+		if t := gurlib.ParseTime(cmd.duration); int(t) > 0 {
+			cmd.n = -1
+		}
+	}
+
 	go func() {
 
 		defer close(work)
@@ -97,6 +103,8 @@ func (cmd *GurlCmd) Producer() {
 }
 
 func (cmd *GurlCmd) benchMain() {
+
+	defer os.Exit(0)
 
 	c, n := cmd.c, cmd.n
 	g := cmd.Gurl
@@ -215,7 +223,6 @@ end:
 			break end
 		}
 	}
-	os.Exit(0)
 }
 
 func CmdErr(err error) {
