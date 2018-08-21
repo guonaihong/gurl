@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/NaihongGuo/flag"
+	"github.com/guonaihong/flag"
 	"io"
 	"io/ioutil"
 	"log"
