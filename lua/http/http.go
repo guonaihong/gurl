@@ -85,8 +85,10 @@ func (h *HTTP) send(L *lua.LState) int {
 
 	rsp, err := g.SendExec(h.Client)
 	if err != nil {
-		L.ArgError(1, "http:send expected:"+err.Error())
-		return 0
+		tb := L.CreateTable(0, 3)
+		tb.RawSetH(lua.LString("err"), lua.LString(err.Error()))
+		L.Push(tb)
+		return 1
 	}
 
 	tb := L.CreateTable(0, 3)
