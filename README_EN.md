@@ -142,7 +142,7 @@ Used with the -bench option to control the press time, support unit, s (seconds)
 Can also be mixed -duration 1m10s
 
 ##### `-rate`
-Specify how many times to write per second, currently only open the -bench option to work
+Specify how many times to write per second
 ```
 gurl -bench -ac 25 -an 3000 -rate 3000 :1234
 Benchmarking 127.0.0.1 (be patient)

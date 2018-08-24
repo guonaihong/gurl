@@ -16,6 +16,12 @@ func ParseTime(t string) (rv time.Duration) {
 			rv += time.Duration(t0) * time.Second
 			t0 = 0
 		case v == 'm':
+			if k+1 < len(t) && t[k+1] == 's' {
+				rv += time.Duration(t0) * time.Millisecond
+				t0 = 0
+				k++
+				continue
+			}
 			rv += time.Duration(t0*60) * time.Second
 			t0 = 0
 		case v == 'h':

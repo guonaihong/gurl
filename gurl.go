@@ -35,6 +35,7 @@ type GurlCmd struct {
 	cronExpr string
 	work     chan struct{}
 	wg       sync.WaitGroup
+	bench    bool
 	*gurlib.Gurl
 }
 
@@ -102,10 +103,11 @@ func (cmd *GurlCmd) Producer() {
 	}()
 }
 
-func (cmd *GurlCmd) benchMain() {
+func (cmd *GurlCmd) main() {
 
 	defer os.Exit(0)
 
+	var report *gurlib.Report
 	c, n := cmd.c, cmd.n
 	g := cmd.Gurl
 	url := g.Url
@@ -125,12 +127,17 @@ func (cmd *GurlCmd) benchMain() {
 		interval = int(time.Second) / cmd.rate
 	}
 
-	report := gurlib.NewReport(c, n, url)
+	if cmd.bench {
+		report = gurlib.NewReport(c, n, url)
+	}
+
 	if len(cmd.duration) > 0 {
 		if t := gurlib.ParseTime(cmd.duration); int(t) > 0 {
 			wg.Add(1)
 
-			report.SetDuration(t)
+			if report != nil {
+				report.SetDuration(t)
+			}
 			workTimeout := make(chan struct{}, 1000)
 			work = workTimeout
 			ticker := time.NewTicker(t)
@@ -179,6 +186,7 @@ func (cmd *GurlCmd) benchMain() {
 
 				work <- struct{}{}
 				if count++; count == n {
+					fmt.Printf("hahahahaha\n")
 					return
 				}
 			}
@@ -196,17 +204,25 @@ func (cmd *GurlCmd) benchMain() {
 				taskNow := time.Now()
 				rsp, err := g.Send()
 				if err != nil {
-					report.AddErrNum()
+					if report != nil {
+						report.AddErrNum()
+					} else {
+						CmdErr(err)
+					}
 					continue
 				}
 
-				report.Cal(taskNow, rsp)
+				if report != nil {
+					report.Cal(taskNow, rsp)
+				}
 			}
 
 		}(i)
 	}
 
-	report.StartReport()
+	if report != nil {
+		report.StartReport()
+	}
 	go func() {
 		wg.Wait()
 		done <- struct{}{}
@@ -216,10 +232,14 @@ end:
 	for {
 		select {
 		case <-sig:
-			report.Wait()
+			if report != nil {
+				report.Wait()
+			}
 			break end
 		case <-done:
-			report.Wait()
+			if report != nil {
+				report.Wait()
+			}
 			break end
 		}
 	}
@@ -243,73 +263,6 @@ func CmdErr(err error) {
 
 	fmt.Printf("%s\n", err)
 }
-
-func (cmd *GurlCmd) main() {
-
-	c := cmd.c
-	work := cmd.work
-	wg := &cmd.wg
-	g := cmd.Gurl
-
-	defer func() {
-		wg.Wait()
-		os.Exit(0)
-	}()
-
-	g.ParseInit()
-	for i := 0; i < c; i++ {
-
-		wg.Add(1)
-
-		go func() {
-			defer wg.Done()
-			for range work {
-				_, err := g.Send()
-				CmdErr(err)
-			}
-		}()
-	}
-
-}
-
-/*
-//TODO
-func jsConfBenchMain(c, n int, url string,
-	conf string, work chan struct{},
-	wg *sync.WaitGroup, g *gurlib.Gurl) {
-
-	report := gurlib.NewReport(c, n, url)
-	all, _ := ioutil.ReadFile(conf)
-
-	for i := 0; i < c; i++ {
-		wg.Add(1)
-
-		go func() {
-			js := gurlib.NewJsEngine(g.Client)
-
-			defer wg.Done()
-
-			for range work {
-
-				taskNow := time.Now()
-				rsp, err := js.VM.Run(string(all))
-				if err != nil {
-					report.AddErrNum()
-					fmt.Printf("%s\n", err)
-					os.Exit(1)
-				}
-
-				report.Cal(taskNow, rsp)
-			}
-		}()
-	}
-
-	report.StartReport()
-	wg.Wait()
-	report.Wait()
-	os.Exit(0)
-}
-*/
 
 func httpEcho(addr string) {
 
@@ -520,6 +473,7 @@ func gurlMain(message gurlib.Message, argv0 string, argv []string) {
 		cronExpr: *cronExpr,
 		Gurl:     &g,
 		work:     make(chan struct{}, 1000),
+		bench:    *bench,
 	}
 
 	if len(*cronExpr) > 0 {
@@ -540,7 +494,6 @@ func gurlMain(message gurlib.Message, argv0 string, argv []string) {
 
 	if *bench {
 		g.O = ""
-		cmd.benchMain()
 	}
 
 	cmd.main()

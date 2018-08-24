@@ -143,7 +143,7 @@ Usage of gurl:
 也可以混合使用 -duration 1m10s
 
 ##### `-rate`
-指定每秒写多少条，目前只有打开-bench选项才起作用
+指定每秒写多少条
 ```
 gurl -bench -ac 25 -an 3000 -rate 3000 :1234
 Benchmarking 127.0.0.1 (be patient)
