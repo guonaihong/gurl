@@ -90,7 +90,7 @@ Specified number
 
 ##### `-bench`
 In the pressure test mode, the http server can be pressed and used with the -ac, -an, -duration, -rate option.
- ```bash
+ ``` console
     gurl -bench -ac 25 -an 1000000 :1234
     Benchmarking 127.0.0.1 (be patient)
       Completed          100000 requests [2018-08-11 21:58:56.143]
@@ -143,7 +143,7 @@ Can also be mixed -duration 1m10s
 
 ##### `-rate`
 Specify how many times to write per second
-```
+``` console
 gurl -bench -ac 25 -an 3000 -rate 3000 :1234
 Benchmarking 127.0.0.1 (be patient)
   Completed             300 requests [2018-08-11 22:02:01.625]
