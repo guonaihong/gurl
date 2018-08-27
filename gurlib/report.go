@@ -15,6 +15,7 @@ type result struct {
 
 type Report struct {
 	allResult   chan result
+	waitQuit    chan struct{}
 	quit        chan struct{}
 	allTimes    []float64
 	statusCodes map[int]int
@@ -47,6 +48,7 @@ func NewReport(c, n int, url string) *Report {
 	r := &Report{
 		allResult:   make(chan result, 1000),
 		quit:        make(chan struct{}, 1),
+		waitQuit:    make(chan struct{}, 1),
 		laddr:       url,
 		startNow:    time.Now(),
 		c:           c,
@@ -196,7 +198,7 @@ func (r *Report) StartReport() {
 	go func() {
 		defer func() {
 			fmt.Printf("  Finished  %15d requests\n", r.recvN)
-			r.quit <- struct{}{}
+			r.waitQuit <- struct{}{}
 		}()
 
 		if r.step > 0 {
@@ -242,6 +244,10 @@ func (r *Report) StartReport() {
 					r.recvN++
 					r.allTimes = append(r.allTimes, v.time)
 					r.statusCodes[v.statusCode]++
+				case _, ok := <-r.quit:
+					if !ok {
+						return
+					}
 				}
 			}
 		}
@@ -251,7 +257,7 @@ func (r *Report) StartReport() {
 }
 
 func (r *Report) Wait() {
-	close(r.allResult)
-	<-r.quit
+	close(r.quit)
+	<-r.waitQuit
 	r.report()
 }
