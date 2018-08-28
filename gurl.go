@@ -138,10 +138,10 @@ func (cmd *GurlCmd) main() {
 			if report != nil {
 				report.SetDuration(t)
 			}
-			workTimeout := make(chan struct{}, 1000)
+			workTimeout := make(chan struct{}, 100)
 			work = workTimeout
-			ticker := time.NewTicker(t)
 
+			ticker := time.NewTicker(t)
 			go func() {
 
 				defer func() {
@@ -153,10 +153,11 @@ func (cmd *GurlCmd) main() {
 					select {
 					case <-ticker.C:
 						return
-					default:
+					case workTimeout <- struct{}{}:
 					}
-					workTimeout <- struct{}{}
+
 				}
+
 			}()
 		}
 	}
@@ -186,7 +187,6 @@ func (cmd *GurlCmd) main() {
 
 				work <- struct{}{}
 				if count++; count == n {
-					fmt.Printf("hahahahaha\n")
 					return
 				}
 			}
