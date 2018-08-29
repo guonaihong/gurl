@@ -138,7 +138,7 @@ func (cmd *GurlCmd) main() {
 			if report != nil {
 				report.SetDuration(t)
 			}
-			workTimeout := make(chan struct{}, 100)
+			workTimeout := make(chan struct{}, 1000)
 			work = workTimeout
 
 			ticker := time.NewTicker(t)
@@ -146,6 +146,8 @@ func (cmd *GurlCmd) main() {
 
 				defer func() {
 					close(workTimeout)
+					for range workTimeout {
+					}
 					wg.Done()
 				}()
 
