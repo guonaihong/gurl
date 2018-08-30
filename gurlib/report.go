@@ -202,17 +202,23 @@ func (r *Report) StartReport() {
 		}()
 
 		if r.step > 0 {
-			for v := range r.allResult {
+			for {
+				select {
+				case _, ok := <-r.quit:
+					if !ok {
+						return
+					}
+				case v := <-r.allResult:
+					r.recvN++
+					if r.step > 0 && r.recvN%r.step == 0 {
+						now := time.Now()
+						fmt.Printf("  Completed %15d requests [%s%s]\n", r.recvN,
+							now.Format("2006-01-02 15:04:05"), zeroMilliseconds(now.Format(".999")))
+					}
 
-				r.recvN++
-				if r.step > 0 && r.recvN%r.step == 0 {
-					now := time.Now()
-					fmt.Printf("  Completed %15d requests [%s%s]\n", r.recvN,
-						now.Format("2006-01-02 15:04:05"), zeroMilliseconds(now.Format(".999")))
+					r.allTimes = append(r.allTimes, v.time)
+					r.statusCodes[v.statusCode]++
 				}
-
-				r.allTimes = append(r.allTimes, v.time)
-				r.statusCodes[v.statusCode]++
 			}
 		} else {
 			begin := time.Now()

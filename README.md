@@ -297,7 +297,7 @@ gurl -X POST -F mode=A -F text=good -F voice=@./good.opus -url http://127.0.0.1:
 #### `-kargs`
 该命令选选项主要从命令行传递参数给lua script
 
-下而的example讲如何使用gurl内置的lua函数，以下代码都可以通过-K 选项执行，-kargs "这里是从给脚本的命令行参数"
+下面的example讲如何使用gurl内置的lua函数，以下代码都可以通过-K 选项执行，-kargs "这里是从给脚本的命令行参数"
 * 在配置文件里面解析命令行配置
 ```lua
     local cmd = require("cmd")
