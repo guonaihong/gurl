@@ -300,21 +300,17 @@ gurl -X POST -F mode=A -F text=good -F voice=@./good.opus -url http://127.0.0.1:
 下面的example讲如何使用gurl内置的lua函数，以下代码都可以通过-K 选项执行，-kargs "这里是从给脚本的命令行参数"
 * 在配置文件里面解析命令行配置
 ```lua
-    local cmd = require("cmd")
-    local flag = cmd.new()
+    local flag = require("flag").new()
     local opt = flag
-            :opt_str("f, file", "", "open audio file")
-            :opt_str("a, addr", "", "Remote service address")
-            :parse("-f ./tst.pcm -a 127.0.0.1:8080")
+                :opt_str("f, file", "", "open audio file")
+                :opt_str("a, addr", "", "Remote service address")
+                :parse("-f ./tst.pcm -a 127.0.0.1:8080")
 
-    function tableHasKey(table, key)
-        return table[key] ~= nil 
-    end
 
-    if (not tableHasKey(opt, "f")) or
-        (not tableHasKey(opt, "file")) or
-        (not tableHasKey(opt, "a")) or
-        (not tableHasKey(opt, "addr")) then
+    if  #opt["f"] == 0 or
+        #opt["file"] == 0 or
+        #opt["a"] == 0 or
+        #opt["addr"] == 0  then
 
         opt.Usage()
 

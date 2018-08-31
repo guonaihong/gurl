@@ -298,21 +298,17 @@ This command option mainly passes parameters from the command line to lua script
 The following example shows how to use gurl built-in lua function. The following code can be executed with the -K option, -kargs "here is the command line argument from the script"
 * Parse the command line configuration in the configuration file
 ```lua
-    local cmd = require("cmd")
-    local flag = cmd.new()
+    local flag = require("flag").new()
     local opt = flag
-            :opt_str("f, file", "", "open audio file")
-            :opt_str("a, addr", "", "Remote service address")
-            :parse("-f ./tst.pcm -a 127.0.0.1:8080")
+                :opt_str("f, file", "", "open audio file")
+                :opt_str("a, addr", "", "Remote service address")
+                :parse("-f ./tst.pcm -a 127.0.0.1:8080")
 
-    function tableHasKey(table, key)
-        return table[key] ~= nil 
-    end
 
-    if (not tableHasKey(opt, "f")) or
-        (not tableHasKey(opt, "file")) or
-        (not tableHasKey(opt, "a")) or
-        (not tableHasKey(opt, "addr")) then
+    if  #opt["f"] == 0 or
+        #opt["file"] == 0 or
+        #opt["a"] == 0 or
+        #opt["addr"] == 0  then
 
         opt.Usage()
 
@@ -322,7 +318,6 @@ The following example shows how to use gurl built-in lua function. The following
     for k, v in pairs(opt) do
         print("cmd opt ("..k..") parse value ("..v..")")
     end
-
 ```
 * Send http request
 ```lua
