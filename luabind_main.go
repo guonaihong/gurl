@@ -14,19 +14,27 @@ import (
 )
 
 type LuaEngine struct {
-	L *lua.LState
+	L    *lua.LState
+	args string
 }
 
-func NewLuaEngine(client *http.Client) *LuaEngine {
+func (l *LuaEngine) getCmdArgs(L *lua.LState) int {
+	l.L.Push(lua.LString(l.args)) /* push result */
+	return 1
+}
+
+func NewLuaEngine(client *http.Client, kargs string) *LuaEngine {
 	L := lua.NewState()
-	engine := &LuaEngine{L: L}
-	L.PreloadModule("cmd", cmdparse.Loader)
+	engine := &LuaEngine{L: L, args: kargs}
+	L.PreloadModule("flag", cmdparse.Loader)
 	L.PreloadModule("http", myhttp.New(client).Loader)
 	L.PreloadModule("uuid", uuid.Loader)
 	L.PreloadModule("time", time.Loader)
 	L.PreloadModule("json", json.Loader)
 	L.PreloadModule("log", log.Loader)
 	L.PreloadModule("strings", strings.Loader)
+
+	L.SetGlobal("get_cmd_args", L.NewFunction(engine.getCmdArgs))
 	//socket.RegisterSocketType(L)
 	return engine
 }

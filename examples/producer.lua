@@ -1,16 +1,14 @@
-local cmd = require("cmd")
+local flag = require("flag").new()
 
-local flag = cmd.new()
 local opt = flag
             :opt_str("l, list", "", "open audio list file")
-            :parse(gurl_cmd)
+            :parse(get_cmd_args())
 
 local list = opt.l
 if list == "" then
     list = opt.list
 end
 
-print("producer:lua script start:open "..list)
 local f = assert(io.open(list, "r"))
 
 while true do

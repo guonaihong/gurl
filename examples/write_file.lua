@@ -1,9 +1,8 @@
-local cmd = require("cmd")
+local flag = require("flag").new()
 
-local flag = cmd.new()
 local opt = flag
             :opt_str("f, file", "", "open audio file")
-            :parse(gurl_cmd)
+            :parse(get_cmd_args())
 
 if #opt["file"] == 0 then
     opt:usage()

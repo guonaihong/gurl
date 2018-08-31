@@ -20,7 +20,7 @@ local http = require("http")
 local flag = cmd.new()
 local opt = flag
             :opt_str("url", "", "Remote service address")
-            :parse(gurl_cmd)
+            :parse(get_cmd_args())
 
 `
 	out.WriteString(cmd)
@@ -57,9 +57,8 @@ func Lua2Cmd(conf string, kargs string) {
 		return
 	}
 
-	L := NewLuaEngine(&http.Client{})
+	L := NewLuaEngine(&http.Client{}, kargs)
 
-	L.L.SetGlobal("gurl_cmd", lua.LString(kargs))
 	err = L.L.DoString(string(all))
 	if err != nil {
 		//fmt.Printf("lua2cmd:%s\n", err)

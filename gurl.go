@@ -338,8 +338,7 @@ func (cmd *GurlCmd) LuaMain(message gurlib.Message) {
 		go func(id int) {
 			defer wg.Done()
 
-			l := NewLuaEngine(cmd.Client)
-			l.L.SetGlobal("gurl_cmd", lua.LString(kargs))
+			l := NewLuaEngine(cmd.Client, kargs)
 			l.L.SetGlobal("in_ch", lua.LChannel(message.In))
 			l.L.SetGlobal("out_ch", lua.LChannel(message.Out))
 

@@ -1,17 +1,16 @@
-local cmd = require("cmd")
+local log = require("log").new("debug")
+local flag = require("flag").new()
 local uuid = require("uuid")
 local time = require("time")
 local http = require("http")
 local json = require("json")
 local strings = require("strings")
-local log = require("log").new("debug")
 
-local flag = cmd.new()
 local opt = flag
             :opt_str("f, file", "", "open audio file")
             :opt_str("url", "", "http url")
             :opt_str("appkey", "", "appkey")
-            :parse(gurl_cmd)
+            :parse(get_cmd_args())
 
 --for k, v in pairs(opt) do
     --print("k "..k.." v "..v)
