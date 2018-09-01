@@ -4,7 +4,7 @@
 * [chinese](./README.md)
 
 #### Introduction
-Gurl is a pain point in the process of using curl.Gurl implements curl command line options.In daily use, it is found that the data and behavior of the curl script are severely coupled. If the configuration file is supported and the configuration file supports variables, the for, if, and function functions are supported. Support for writing json data on the command line is just fine.Finally, under the philosophy of gurl, gurl hopes to be a quiet tool. It doesn't want to be called bad, let users run away and leave it.
+Gurl is the successor to http bench tools and curl
 
 #### Features
 - Supports some of curl's features
