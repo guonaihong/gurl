@@ -20,6 +20,8 @@ env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
 
 #### 命令行选项
 ```console
+guonaihong https://github.com/guonaihong/gurl
+
 Usage of gurl:
   -A, --user-agent string
         Send User-Agent STRING to server (default "gurl")
@@ -53,14 +55,14 @@ Usage of gurl:
         HTTP POST data
   -duration string
         Duration of the test
-  -echo string
-        HTTP echo server
   -form-string string[]
         Specify HTTP multipart POST data (H)
   -gen
         Generate the default lua script
   -kargs string
         Command line parameters passed to the configuration file
+  -l string
+        Listen mode, HTTP echo server
   -o, --output string
         Write to FILE instead of stdout (default "stdout")
   -oflag string
@@ -69,8 +71,7 @@ Usage of gurl:
         Requests per second
   -url string
         Specify a URL to fetch
-  -v, --verbose
-        Make the operation more talkative
+
 ```
 ##### `-F 或 --form`
 设置form表单, 比如-F text=文本内容，或者-F text=@./从文件里面读取, -F 选项的语义和curl命令一样

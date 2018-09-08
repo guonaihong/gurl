@@ -390,7 +390,7 @@ func gurlMain(message gurlib.Message, argv0 string, argv []string) {
 	bench := commandlLine.Bool("bench", false, "Run benchmarks test")
 	conns := commandlLine.Int("conns", DefaultConnections, "Max open idle connections per target host")
 	cpus := commandlLine.Int("cpus", 0, "Number of CPUs to use")
-	echo := commandlLine.String("echo", "", "HTTP echo server")
+	listen := commandlLine.String("l", "", "Listen mode, HTTP echo server")
 	data := commandlLine.String("d, data", "", "HTTP POST data")
 	verbose := commandlLine.Bool("v, verbose", false, "Make the operation more talkative")
 	agent := commandlLine.String("A, user-agent", "gurl", "Send User-Agent STRING to server")
@@ -399,8 +399,8 @@ func gurlMain(message gurlib.Message, argv0 string, argv []string) {
 	commandlLine.Author("guonaihong https://github.com/guonaihong/gurl")
 	commandlLine.Parse(argv)
 
-	if *echo != "" {
-		httpEcho(*echo)
+	if *listen != "" {
+		httpEcho(*listen)
 		return
 	}
 
