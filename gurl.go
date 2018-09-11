@@ -395,6 +395,7 @@ func gurlMain(message gurlib.Message, argv0 string, argv []string) {
 	verbose := commandlLine.Bool("v, verbose", false, "Make the operation more talkative")
 	agent := commandlLine.String("A, user-agent", "gurl", "Send User-Agent STRING to server")
 	duration := commandlLine.String("duration", "", "Duration of the test")
+	connectTimeout := commandlLine.String("connect-timeout", "", "Maximum time allowed for connection")
 
 	commandlLine.Author("guonaihong https://github.com/guonaihong/gurl")
 	commandlLine.Parse(argv)
@@ -428,9 +429,14 @@ func gurlMain(message gurlib.Message, argv0 string, argv []string) {
 		runtime.GOMAXPROCS(*cpus)
 	}
 
+	dialer := &net.Dialer{
+		Timeout: gurlib.ParseTime(*connectTimeout),
+	}
+
 	client := http.Client{
 		Transport: &http.Transport{
 			MaxIdleConnsPerHost: *conns,
+			Dial:                dialer.Dial,
 		},
 	}
 
