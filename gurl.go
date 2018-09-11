@@ -429,15 +429,18 @@ func gurlMain(message gurlib.Message, argv0 string, argv []string) {
 		runtime.GOMAXPROCS(*cpus)
 	}
 
-	dialer := &net.Dialer{
-		Timeout: gurlib.ParseTime(*connectTimeout),
-	}
+	/*
+		dialer := &net.Dialer{
+			Timeout: gurlib.ParseTime(*connectTimeout),
+		}
+	*/
 
 	client := http.Client{
 		Transport: &http.Transport{
 			MaxIdleConnsPerHost: *conns,
-			Dial:                dialer.Dial,
+			//Dial:                dialer.Dial,
 		},
+		Timeout: gurlib.ParseTime(*connectTimeout),
 	}
 
 	g := gurlib.Gurl{
