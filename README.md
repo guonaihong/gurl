@@ -45,6 +45,8 @@ Usage of gurl:
         Number of requests to perform (default 1)
   -bench
         Run benchmarks test
+  -connect-timeout string
+        Maximum time allowed for connection
   -conns int
         Max open idle connections per target host (default 10000)
   -cpus int
@@ -71,7 +73,6 @@ Usage of gurl:
         Requests per second
   -url string
         Specify a URL to fetch
-
 ```
 ##### `-F 或 --form`
 设置form表单, 比如-F text=文本内容，或者-F text=@./从文件里面读取, -F 选项的语义和curl命令一样
@@ -137,8 +138,11 @@ Usage of gurl:
  ```
 
 ##### `-duration`
-和-bench选项一起使用，可以控制压测时间，支持单位符,s(秒), m(分), h(小时), d(天), w(周), M(月), y(年)  
+和-bench选项一起使用，可以控制压测时间，支持单位符,ms(毫秒), s(秒), m(分), h(小时), d(天), w(周), M(月), y(年)
 也可以混合使用 -duration 1m10s
+
+##### `-connect-timeout`
+设置http 连接超时时间。支持单位符,ms(毫秒), s(秒), m(分), h(小时), d(天), w(周), M(月), y(年)
 
 ##### `-rate`
 指定每秒写多少条

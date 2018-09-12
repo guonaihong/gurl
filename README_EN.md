@@ -46,6 +46,8 @@ Usage of gurl:
         Number of requests to perform (default 1)
   -bench
         Run benchmarks test
+  -connect-timeout string
+        Maximum time allowed for connection
   -conns int
         Max open idle connections per target host (default 10000)
   -cpus int
@@ -72,7 +74,6 @@ Usage of gurl:
         Requests per second
   -url string
         Specify a URL to fetch
-
 ```
 
 ##### `-F 或 --form`
@@ -141,6 +142,9 @@ In the pressure test mode, the http server can be pressed and used with the -ac,
 ##### `-duration`
 Used with the -bench option to control the press time, support unit, s (seconds), m (minutes), h (hours), d (days), w (weeks), M (months), y (years) )
 Can also be mixed -duration 1m10s
+
+##### `-connect-timeout`
+Set the http connection timeout period. Support unit, ms (milliseconds), s (seconds), m (minutes), h (hours), d (days), w (weeks), M (months), y (years)
 
 ##### `-rate`
 Specify how many times to write per second
