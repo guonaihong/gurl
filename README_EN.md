@@ -30,7 +30,7 @@ Usage of gurl:
 * [websocket](https://github.com/guonaihong/wsurl/blob/master/README.md)
 
 #### tcp, udp subcommand usage
-* [tcp udp](http:https://github.com/guonaihong/conn/blob/master/README.md)
+* [tcp udp](https://github.com/guonaihong/conn/blob/master/README.md)
 
 #### http subcommand usage
 ```console

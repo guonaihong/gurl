@@ -31,7 +31,7 @@ Usage of gurl:
 * [websocket](https://github.com/guonaihong/wsurl/blob/master/README.md)
 
 #### tcp, udp 子命令用法
-* [tcp udp](http:https://github.com/guonaihong/conn/blob/master/README.md)
+* [tcp udp](https://github.com/guonaihong/conn/blob/master/README.md)
 
 #### http 子命令用法
 ```console
