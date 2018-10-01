@@ -1,4 +1,4 @@
-package main
+package gurl
 
 import (
 	"fmt"
@@ -514,15 +514,15 @@ type Chan struct {
 	done chan lua.LValue
 }
 
-func main() {
+func Main(name string, args []string) {
 
 	var wg sync.WaitGroup
 	var cmds [][]string
 
 	prevPos := 1
-	for k, v := range os.Args[1:] {
+	for k, v := range args {
 		if v == "|" {
-			cmds = append(cmds, os.Args[prevPos:k+1])
+			cmds = append(cmds, args[prevPos:k+1])
 			prevPos = k + 2
 		}
 	}
@@ -530,11 +530,11 @@ func main() {
 	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
 
 	if len(cmds) == 0 {
-		cmds = [][]string{os.Args[1:]}
+		cmds = [][]string{args}
 	}
 
-	if prevPos != 1 && prevPos < len(os.Args) {
-		cmds = append(cmds, os.Args[prevPos:])
+	if prevPos != 1 && prevPos < len(args) {
+		cmds = append(cmds, args[prevPos:])
 	}
 
 	var channel []*Chan
@@ -563,8 +563,7 @@ func main() {
 				m.InDone = ch[k-1].done
 			}
 
-			//fmt.Printf("k=%d, %#v\n", k, m)
-			gurlMain(m, os.Args[0], v)
+			gurlMain(m, name, v)
 		}(channel, k, v)
 	}
 

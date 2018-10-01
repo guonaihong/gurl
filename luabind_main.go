@@ -1,4 +1,4 @@
-package main
+package gurl
 
 import (
 	myhttp "github.com/guonaihong/gurl/lua/http"
