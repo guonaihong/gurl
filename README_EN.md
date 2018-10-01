@@ -4,22 +4,35 @@
 * [chinese](./README.md)
 
 #### Introduction
-Gurl is the successor to http bench tools and curl
+Gurl is the successor to http, websocket bench tools and curl
 
 #### Features
-- Supports some of curl's features
-- Supports some of the functions of ab, and the performance is higher than the ab command
-- Support regular running gurl (support cron expression function)
-- Support lua as configuration file (support for if, else, for, func)
-- Url support abbreviations
-- Support pipeline mode
+* Multi-protocol support http, websocket, tcp, udp
+* Supports some of curl's features
+* Supports some of the functions of ab, and the performance is higher than the ab command
+* Support regular running gurl (support cron expression function)
+* Support lua as configuration file (support for if, else, for, func)
+* Url support abbreviations
+* Support pipeline mode
 
 #### install
 ```bash
-env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
+env GOPATH=`pwd` go get -u github.com/guonaihong/gurl/gurl
 ```
+#### gurl main command usage
+```console
+Usage of gurl:
+    http             Use the http subcommand
+    tcp, udp         Use the tcp or udp subcommand
+    ws, websocket    Use the websocket subcommand
+```
+#### websocket subcommand usage
+* [websocket](https://github.com/guonaihong/wsurl/blob/master/README.md)
 
-#### usage
+#### tcp, udp subcommand usage
+* [tcp udp](http:https://github.com/guonaihong/conn/blob/master/README.md)
+
+#### http subcommand usage
 ```console
 guonaihong https://github.com/guonaihong/gurl
 
@@ -84,7 +97,7 @@ Similar to -F or --form, without interpreting the @symbol, passed to the server 
 ##### `-ac`
 Specify the number of threads, open ac threads, send an request
 ```bash
-./gurl -an 10 -ac 2 -F text=good :1234
+./gurl http -an 10 -ac 2 -F text=good :1234
 ```
 
 ##### `-an`
@@ -93,7 +106,7 @@ Specified number
 ##### `-bench`
 In the pressure test mode, the http server can be pressed and used with the -ac, -an, -duration, -rate option.
  ``` console
-    gurl -bench -ac 25 -an 1000000 :1234
+    gurl http -bench -ac 25 -an 1000000 :1234
     Benchmarking 127.0.0.1 (be patient)
       Completed          100000 requests [2018-08-11 21:58:56.143]
       Completed          200000 requests [2018-08-11 21:59:00.374]
@@ -149,7 +162,7 @@ Set the http connection timeout period. Support unit, ms (milliseconds), s (seco
 ##### `-rate`
 Specify how many times to write per second
 ``` console
-gurl -bench -ac 25 -an 3000 -rate 3000 :1234
+gurl http -bench -ac 25 -an 3000 -rate 3000 :1234
 Benchmarking 127.0.0.1 (be patient)
   Completed             300 requests [2018-08-11 22:02:01.625]
   Completed             600 requests [2018-08-11 22:02:01.725]
@@ -196,21 +209,21 @@ Percentage of the requests served within a certain time (ms)
 ##### `|`
 Pipeline mode, mainly designed to concatenate multiple lua scripts, the output of the first script becomes the input of the second script
 ```bash
- ./gurl -an 1 -K ./producer.lua -kargs "-l all.txt" "|" -an 0 -ac 12 -K ./http_slice.lua -kargs "-appkey xx -url http://192.168.6.128:24990/asr/pcm " "|" -an 0 -K ./write_file.lua -kargs "-f asr.result"
+ ./gurl http -an 1 -K ./producer.lua -kargs "-l all.txt" "|" -an 0 -ac 12 -K ./http_slice.lua -kargs "-appkey xx -url http://192.168.6.128:24990/asr/pcm " "|" -an 0 -K ./write_file.lua -kargs "-f asr.result"
 ```
 
 ##### `-d 或 --data`
 Send http body data to the server, support @symbol to open a file, if not @ directly send the string after -d to the server
 ```bash
-  gurl -d "good" :12345
-  gurl -d "@./file" :12345
+  gurl http -d "good" :12345
+  gurl http -d "@./file" :12345
 ```
 
 ##### `-J`
 The key and value after -J will be assembled into a json string and sent to the server. key:value, where value will be interpreted as a string, key:=value, value will be resolved to bool or number or decimal
   * Common usage
 ```bash
-  ./gurl -J username:admin -J passwd:123456 -J bool_val:=true  -J int_val:=3 -J float_val:=0.3 http://127.0.0.1:12345
+  ./gurl http -J username:admin -J passwd:123456 -J bool_val:=true  -J int_val:=3 -J float_val:=0.3 http://127.0.0.1:12345
   {
     "bool_val": true,
     "float_val": 0.3,
@@ -221,7 +234,7 @@ The key and value after -J will be assembled into a json string and sent to the 
 ```
   * Nested usage
   ```bash
-  ./gurl -J a.b.c.d:=true -J a.b.c.e:=111 http://127.0.0.1:12345
+  ./gurl http -J a.b.c.d:=true -J a.b.c.e:=111 http://127.0.0.1:12345
   {
     "a": {
       "b": {
@@ -237,7 +250,7 @@ The key and value after -J will be assembled into a json string and sent to the 
 ##### `-Jfa`
 Insert json data into the multipart field
 ```bash
-./gurl -Jfa text=DisplayText:good -Jfa text=Language:cn -Jfa text2=look:me -F text=good :12345
+./gurl http -Jfa text=DisplayText:good -Jfa text=Language:cn -Jfa text2=look:me -F text=good :12345
 
 --4361c4e6ae1b083e9e0508a7b40eb215bccd265c4bed00137cc7d112e890
 Content-Disposition: form-data; name="text"
@@ -259,13 +272,13 @@ Similar to the -Jfa syntax, does not parse the @symbol
 ##### `-H 或者 --header`
 Set http headers, you can specify multiple
 ```bash
-./gurl -H "header1:value1" -H "header2:value2" http://xxx.xxx.xxx.xxx:port
+./gurl http -H "header1:value1" -H "header2:value2" http://xxx.xxx.xxx.xxx:port
 ```
 
 ##### `-cron`
 Send regularly (take results from the service every second)
 ```bash
-./gurl -cron "@every 1s" -H "session-id:f0c371f1-f418-477c-92d4-129c16c8e4d5" http://127.0.0.1:12345/asr/result
+./gurl http -cron "@every 1s" -H "session-id:f0c371f1-f418-477c-92d4-129c16c8e4d5" http://127.0.0.1:12345/asr/result
 ```
 
 ##### `-url`
@@ -283,15 +296,15 @@ Tip: The commands after -oflag can be combined with "append|line" to mean append
 ##### `-gen`
 * Generate a configuration file from the command line's data (option -gen)
 ```lua
-./gurl -X POST -F mode=A -F text=good -F voice=@./good.opus -url http://127.0.0.1:24909/eval/opus -gen &>demo.lua 
+gurl http -X POST -F mode=A -F text=good -F voice=@./good.opus -url http://127.0.0.1:24909/eval/opus -gen &>demo.lua 
 
 #todo
 
 ```
 * Convert the configuration file to the command line format (option -gen -K configuration file)
 ```bash
-./gurl -K demo.lua -gen
-gurl -X POST -F mode=A -F text=good -F voice=@./good.opus -url http://127.0.0.1:24909/eval/opus
+gurl http -K demo.lua -gen
+gurl http -X POST -F mode=A -F text=good -F voice=@./good.opus -url http://127.0.0.1:24909/eval/opus
 ```
 
 #### `-K`

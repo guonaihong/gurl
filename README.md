@@ -3,11 +3,12 @@
 * [English](./README_EN.md)
 
 #### 简介
-gurl 是http bench工具和curl的继承者
+gurl 是http, websocket bench工具和curl的继承者
 
 #### 功能
+* 多协议支持http, websocket, tcp, udp
 * 支持curl常用命令行选项
-* 支持压测模式，可以根据并发数和线程数，也可以根据持续时间，也可以指定每秒并发数压测http服务
+* 支持压测模式，可以根据并发数和线程数，也可以根据持续时间，也可以指定每秒并发数压测http, websocket, tcp服务
 * 定时运行gurl(支持cron表达式)
 * 支持lua语言作为配置文件(可以写if, else, for, func)
 * url 支持简写
@@ -15,10 +16,24 @@ gurl 是http bench工具和curl的继承者
 
 #### install
 ```bash
-env GOPATH=`pwd` go get -u github.com/guonaihong/gurl
+env GOPATH=`pwd` go get -u github.com/guonaihong/gurl/gurl
 ```
 
-#### 命令行选项
+#### gurl 主命令选项
+```console
+Usage of gurl:
+    http             Use the http subcommand
+    tcp, udp         Use the tcp or udp subcommand
+    ws, websocket    Use the websocket subcommand
+```
+
+#### websocket 子命用法
+* [websocket](https://github.com/guonaihong/wsurl/blob/master/README.md)
+
+#### tcp, udp 子命令用法
+* [tcp udp](http:https://github.com/guonaihong/conn/blob/master/README.md)
+
+#### http 子命令用法
 ```console
 guonaihong https://github.com/guonaihong/gurl
 
@@ -82,7 +97,7 @@ Usage of gurl:
 ##### `-ac`
 指定线程数, 开ac个线程, 发送an个请求
 ```bash
-./gurl -an 10 -ac 2 -F text=good :1234
+gurl http -an 10 -ac 2 -F text=good :1234
 ```
 
 ##### `-an`
@@ -91,7 +106,7 @@ Usage of gurl:
 ##### `-bench`
 压测模式，可以对http服务端进行压测，可以和-ac, -an, -duration, -rate 选项配合使用
  ``` console
-    gurl -bench -ac 25 -an 1000000 :1234
+    gurl http -bench -ac 25 -an 1000000 :1234
     Benchmarking 127.0.0.1 (be patient)
       Completed          100000 requests [2018-08-11 21:58:56.143]
       Completed          200000 requests [2018-08-11 21:59:00.374]
@@ -147,7 +162,7 @@ Usage of gurl:
 ##### `-rate`
 指定每秒写多少条
 ``` console
-gurl -bench -ac 25 -an 3000 -rate 3000 :1234
+gurl http -bench -ac 25 -an 3000 -rate 3000 :1234
 Benchmarking 127.0.0.1 (be patient)
   Completed             300 requests [2018-08-11 22:02:01.625]
   Completed             600 requests [2018-08-11 22:02:01.725]
@@ -194,21 +209,21 @@ Percentage of the requests served within a certain time (ms)
 ##### `|`
 管道模式, 主要为了串联多个lua脚本而设计，第1个脚本的输出，变成第2个脚本的输入
 ```bash
- ./gurl -an 1 -K ./producer.lua -kargs "-l all.txt" "|" -an 0 -ac 12 -K ./http_slice.lua -kargs "-appkey xx -url http://192.168.6.128:24990/asr/pcm " "|" -an 0 -K ./write_file.lua -kargs "-f asr.result"
+ ./gurl http -an 1 -K ./producer.lua -kargs "-l all.txt" "|" -an 0 -ac 12 -K ./http_slice.lua -kargs "-appkey xx -url http://192.168.6.128:24990/asr/pcm " "|" -an 0 -K ./write_file.lua -kargs "-f asr.result"
 ```
 
 ##### `-d 或 --data`
 发送http body数据到服务端, 支持@符号打开一个文件, 如果不接@直接把-d后面字符串发送到服务端
 ```bash
-  gurl -d "good" :12345
-  gurl -d "@./file" :12345
+  gurl http -d "good" :12345
+  gurl http -d "@./file" :12345
 ```
 
 ##### `-J`
 -J 后面的key和value 会被组装成json字符串发送到服务端. key:value，其中value会被解释成字符串, key:=value，value会被解决成bool或者数字或者小数
   * 普通用法
 ```bash
-  ./gurl -J username:admin -J passwd:123456 -J bool_val:=true  -J int_val:=3 -J float_val:=0.3 http://127.0.0.1:12345
+  ./gurl http -J username:admin -J passwd:123456 -J bool_val:=true  -J int_val:=3 -J float_val:=0.3 http://127.0.0.1:12345
   {
     "bool_val": true,
     "float_val": 0.3,
@@ -219,7 +234,7 @@ Percentage of the requests served within a certain time (ms)
 ```
   * 嵌套用法
   ```bash
-  ./gurl -J a.b.c.d:=true -J a.b.c.e:=111 http://127.0.0.1:12345
+  ./gurl http -J a.b.c.d:=true -J a.b.c.e:=111 http://127.0.0.1:12345
   {
     "a": {
       "b": {
@@ -235,7 +250,7 @@ Percentage of the requests served within a certain time (ms)
 ##### `-Jfa`
 向multipart字段中插入json数据
 ```bash
-./gurl -Jfa text=DisplayText:good -Jfa text=Language:cn -Jfa text2=look:me -F text=good :12345
+./gurl http -Jfa text=DisplayText:good -Jfa text=Language:cn -Jfa text2=look:me -F text=good :12345
 
 --4361c4e6ae1b083e9e0508a7b40eb215bccd265c4bed00137cc7d112e890
 Content-Disposition: form-data; name="text"
@@ -257,13 +272,13 @@ good
 ##### `-H 或者 --header`
 设置http 头，可以指定多个
 ```bash
-./gurl -H "header1:value1" -H "header2:value2" http://xxx.xxx.xxx.xxx:port
+./gurl http -H "header1:value1" -H "header2:value2" http://xxx.xxx.xxx.xxx:port
 ```
 
 ##### `-cron`
 定时发送(每隔一秒从服务里取结果)
 ```bash
-./gurl -cron "@every 1s" -H "session-id:f0c371f1-f418-477c-92d4-129c16c8e4d5" http://127.0.0.1:12345/asr/result
+./gurl http -cron "@every 1s" -H "session-id:f0c371f1-f418-477c-92d4-129c16c8e4d5" http://127.0.0.1:12345/asr/result
 ```
 
 ##### `-url`
@@ -282,15 +297,15 @@ good
 ##### `-gen`
 * 从命令行的数据生成配置文件(选项 -gen)
 ```lua
-./gurl -X POST -F mode=A -F text=good -F voice=@./good.opus -url http://127.0.0.1:24909/eval/opus -gen &>demo.lua 
+./gurl http -X POST -F mode=A -F text=good -F voice=@./good.opus -url http://127.0.0.1:24909/eval/opus -gen &>demo.lua 
 
 #todo
 
 ```
 * 把配置文件转成命令行形式(选项-gen -K 配置文件)
 ```bash
-./gurl -K demo.lua -gen
-gurl -X POST -F mode=A -F text=good -F voice=@./good.opus -url http://127.0.0.1:24909/eval/opus
+gurl http -K demo.lua -gen
+gurl http -X POST -F mode=A -F text=good -F voice=@./good.opus -url http://127.0.0.1:24909/eval/opus
 ```
 
 #### `-K`
