@@ -519,11 +519,11 @@ func Main(name string, args []string) {
 	var wg sync.WaitGroup
 	var cmds [][]string
 
-	prevPos := 1
+	prevPos := 0
 	for k, v := range args {
 		if v == "|" {
-			cmds = append(cmds, args[prevPos:k+1])
-			prevPos = k + 2
+			cmds = append(cmds, args[prevPos:k])
+			prevPos = k + 1
 		}
 	}
 

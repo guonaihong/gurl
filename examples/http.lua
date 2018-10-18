@@ -25,9 +25,12 @@ end
 function send_asr(config)
     local xnumber = 0
     local session_id = uuid:newv4()
-    local f = assert(io.open(config.fname, "r"))
 
-    print("start asr send step:"..config.step.." url "..config.url)
+    log:debug("####"..config.name, "####\n")
+
+    local f = assert(io.open(config.name, "r"))
+
+    print("start"..config.name.. "start asr send step:"..config.step.." url "..config.url)
 
     while true do
         local bytes = f:read(config.step)
@@ -85,7 +88,7 @@ function send_asr(config)
         if #body == 0 then
             body = "{}"
         end
-        local str = "[filename]"..config.fname.."<"..session_id..">"..json.format(body)
+        local str = "[filename]"..config.name.."<"..session_id..">"..json.format(body)
         print(str)
 
         channel.select(
@@ -103,7 +106,7 @@ end
 if (opt["f"] ~= nil and #opt["f"] ~= 0 ) or (opt["file"] ~= nil and #opt["file"] ~= 0) then
     send_asr({
         appkey = opt.appkey,
-        fname = opt["file"],
+        name = opt["file"],
         step = 8000,
         time = 250,
         url = opt.url,
@@ -130,10 +133,10 @@ while not exit do
     )
 
     if yes then
-        print("########## "..line[1])
+        print("##########"..line[1].."##")
         send_asr({
             appkey = opt.appkey,
-            fname = line[1],
+            name = line[1],
             step = 8000,
             time = 250,
             url = opt.url,
