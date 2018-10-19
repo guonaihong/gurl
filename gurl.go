@@ -533,7 +533,7 @@ func Main(name string, args []string) {
 		cmds = [][]string{args}
 	}
 
-	if prevPos != 1 && prevPos < len(args) {
+	if prevPos != 0 && prevPos < len(args) {
 		cmds = append(cmds, args[prevPos:])
 	}
 
