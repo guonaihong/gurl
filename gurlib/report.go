@@ -189,9 +189,19 @@ func (r *Report) parseUrl() {
 	fmt.Printf("Benchmarking %s (be patient)\n", addr)
 }
 
-func zeroMilliseconds(ms string) string {
-	ms = ms[1:] //skip .
-	return fmt.Sprintf(".%03s", ms)
+func genTimeStr(now time.Time) string {
+	year, month, day := now.Date()
+	hour, min, sec := now.Clock()
+
+	return fmt.Sprintf("%4d-%02d-%02d %02d:%02d:%02d.%06d",
+		year,
+		month,
+		day,
+		hour,
+		min,
+		sec,
+		now.Nanosecond()/1e3,
+	)
 }
 
 func (r *Report) StartReport() {
@@ -212,8 +222,9 @@ func (r *Report) StartReport() {
 					r.recvN++
 					if r.step > 0 && r.recvN%r.step == 0 {
 						now := time.Now()
-						fmt.Printf("  Completed %15d requests [%s%s]\n", r.recvN,
-							now.Format("2006-01-02 15:04:05"), zeroMilliseconds(now.Format(".999")))
+
+						fmt.Printf("    Opened %15d connections: [%s]\n",
+							r.recvN, genTimeStr(now))
 					}
 
 					r.allTimes = append(r.allTimes, v.time)
@@ -233,8 +244,10 @@ func (r *Report) StartReport() {
 				select {
 				case <-nTick.C:
 					now := time.Now()
-					fmt.Printf("  Completed %15d requests [%s%s]\n", r.recvN,
-						now.Format("2006-01-02 15:04:05"), zeroMilliseconds(now.Format(".999")))
+
+					fmt.Printf("  Completed %15d requests [%s]\n",
+						r.recvN, genTimeStr(now))
+
 					count++
 					next := begin.Add(time.Duration(count * int(interval)))
 					if newInterval := next.Sub(time.Now()); newInterval > 0 {
