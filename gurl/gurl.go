@@ -1,10 +1,10 @@
 package main
 
 import (
-	"github.com/guonaihong/conn"
 	"github.com/guonaihong/flag"
 	"github.com/guonaihong/gurl"
-	"github.com/guonaihong/wsurl"
+	"github.com/guonaihong/gurl/conn"
+	"github.com/guonaihong/gurl/wsurl"
 	"os"
 )
 

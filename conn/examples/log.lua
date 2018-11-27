@@ -1,0 +1,20 @@
+local log = require("log").new("info")
+
+log:debug("1.hello debug", "\n")
+log:info("1.hello info", "\n")
+log:warn("1.hello warn", "\n")
+log:error("1.hello error", "\n")
+print("====================\n")
+
+local log = require("log").new("warn")
+log:debug("2.hello debug", "\n")
+log:info("2.hello info", "\n")
+log:warn("2.hello warn", "\n")
+log:error("2.hello error", "\n")
+print("====================\n")
+
+local log = require("log").new("error")
+log:debug("2.hello debug", "\n")
+log:info("2.hello info", "\n")
+log:warn("2.hello warn", "\n")
+log:error("2.hello error", "\n")
