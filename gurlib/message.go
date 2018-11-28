@@ -1,13 +1,11 @@
 package gurlib
 
-import (
-	"github.com/yuin/gopher-lua"
-)
+import ()
 
 type Message struct {
-	In      chan lua.LValue
-	Out     chan lua.LValue
-	InDone  chan lua.LValue
-	OutDone chan lua.LValue
+	In      chan string
+	Out     chan string
+	InDone  chan string
+	OutDone chan string
 	K       int
 }

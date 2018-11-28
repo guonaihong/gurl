@@ -5,10 +5,8 @@ import (
 	"github.com/guonaihong/flag"
 	"github.com/guonaihong/gurl/gurlib"
 	url2 "github.com/guonaihong/gurl/gurlib/url"
-	"github.com/yuin/gopher-lua"
 	"io"
-	"io/ioutil"
-	"log"
+	_ "io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -38,41 +36,6 @@ type GurlCmd struct {
 	bench    bool
 	*gurlib.Gurl
 }
-
-/*
-func (cmd *GurlCmd) Cron(client *http.Client) {
-	cron := cron.New()
-	conf := cmd.conf
-	cronExpr := cmd.cronExpr
-	kargs := cmd.kargs
-
-	defer cron.Stop()
-
-	var js *gurlib.JsEngine
-	if len(conf) > 0 {
-		js = gurlib.NewJsEngine(client)
-	}
-
-	cmd.MemInit()
-	cron.AddFunc(cronExpr, func() {
-		if len(conf) > 0 {
-			all, err := ioutil.ReadFile(conf)
-			if err != nil {
-				os.Exit(1)
-			}
-
-			js.VM.Set("gurl_args", conf+""+kargs)
-			js.VM.Run(string(all))
-			return
-		}
-
-		_, err := cmd.Send()
-		CmdErr(err)
-	})
-
-	cron.Run()
-}
-*/
 
 func (cmd *GurlCmd) Producer() {
 	work, n := cmd.work, cmd.n
@@ -310,6 +273,7 @@ func cancelled(message gurlib.Message) bool {
 	}
 }
 
+/*
 func (cmd *GurlCmd) LuaMain(message gurlib.Message) {
 
 	conf := cmd.conf
@@ -366,8 +330,9 @@ func (cmd *GurlCmd) LuaMain(message gurlib.Message) {
 	}
 
 }
+*/
 
-func gurlMain(message gurlib.Message, argv0 string, argv []string) {
+func Main(message gurlib.Message, argv0 string, argv []string) {
 	commandlLine := flag.NewFlagSet(argv0, flag.ExitOnError)
 
 	headers := commandlLine.StringSlice("H, header", []string{}, "Pass custom header LINE to server (H)")
@@ -494,7 +459,7 @@ func gurlMain(message gurlib.Message, argv0 string, argv []string) {
 
 	if len(*conf) > 0 {
 		g.O = ""
-		cmd.LuaMain(message)
+		//cmd.LuaMain(message) 重构中，先注释该代码
 
 		if *bench {
 			//TODO
@@ -507,64 +472,4 @@ func gurlMain(message gurlib.Message, argv0 string, argv []string) {
 	}
 
 	cmd.main()
-}
-
-type Chan struct {
-	ch   chan lua.LValue
-	done chan lua.LValue
-}
-
-func Main(name string, args []string) {
-
-	var wg sync.WaitGroup
-	var cmds [][]string
-
-	prevPos := 0
-	for k, v := range args {
-		if v == "|" {
-			cmds = append(cmds, args[prevPos:k])
-			prevPos = k + 1
-		}
-	}
-
-	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
-
-	if len(cmds) == 0 {
-		cmds = [][]string{args}
-	}
-
-	if prevPos != 0 && prevPos < len(args) {
-		cmds = append(cmds, args[prevPos:])
-	}
-
-	var channel []*Chan
-	wg.Add(len(cmds))
-	defer wg.Wait()
-
-	for k, v := range cmds {
-		channel = append(channel, &Chan{
-			done: make(chan lua.LValue),
-			ch:   make(chan lua.LValue, 1000),
-		})
-
-		go func(ch []*Chan, k int, v []string) {
-			defer func() {
-				wg.Done()
-			}()
-
-			m := gurlib.Message{
-				Out:     ch[k].ch,
-				OutDone: ch[k].done,
-				K:       k,
-			}
-
-			if k > 0 {
-				m.In = ch[k-1].ch
-				m.InDone = ch[k-1].done
-			}
-
-			gurlMain(m, name, v)
-		}(channel, k, v)
-	}
-
 }

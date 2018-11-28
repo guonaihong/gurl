@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/guonaihong/flag"
+	"github.com/guonaihong/gurl/gurlib"
 	url2 "github.com/guonaihong/gurl/wsurl/url"
 	"github.com/yuin/gopher-lua"
-	"io/ioutil"
+	_ "io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -235,7 +236,7 @@ func (ws *wsCmd) webSocketEcho(addr string) {
 	fmt.Println(http.ListenAndServe(addr, nil))
 }
 
-func cancelled(message Message) bool {
+func cancelled(message gurlib.Message) bool {
 	select {
 	case <-message.InDone:
 		return true
@@ -244,7 +245,8 @@ func cancelled(message Message) bool {
 	}
 }
 
-func (ws *wsCmd) LuaMain(message Message) {
+/*
+func (ws *wsCmd) LuaMain(message gurlib.Message) {
 
 	conf := ws.conf
 	kargs := ws.kArgs
@@ -271,9 +273,9 @@ func (ws *wsCmd) LuaMain(message Message) {
 
 			defer wg.Done()
 
-			l := NewLuaEngine(kargs)
-			l.L.SetGlobal("in_ch", lua.LChannel(message.In))
-			l.L.SetGlobal("out_ch", lua.LChannel(message.Out))
+				l := NewLuaEngine(kargs)
+				l.L.SetGlobal("in_ch", lua.LChannel(message.In))
+				l.L.SetGlobal("out_ch", lua.LChannel(message.Out))
 
 			for {
 
@@ -300,6 +302,7 @@ func (ws *wsCmd) LuaMain(message Message) {
 		}(i)
 	}
 }
+*/
 
 type rate struct {
 	B int
@@ -571,7 +574,7 @@ end:
 	}
 }
 
-func wsurlMain(message Message, argv0 string, argv []string) {
+func Main(message gurlib.Message, argv0 string, argv []string) {
 	commandlLine := flag.NewFlagSet(argv0, flag.ExitOnError)
 	an := commandlLine.Int("an", 1, "Number of requests to perform")
 	ac := commandlLine.Int("ac", 1, "Number of multiple requests to make")
@@ -632,7 +635,7 @@ func wsurlMain(message Message, argv0 string, argv []string) {
 
 	wscmd.Producer()
 	if len(*conf) > 0 {
-		wscmd.LuaMain(message)
+		//wscmd.LuaMain(message)
 		return
 	}
 
@@ -655,58 +658,4 @@ type Message struct {
 type Chan struct {
 	ch   chan lua.LValue
 	done chan lua.LValue
-}
-
-func Main(name string, args []string) {
-	var wg sync.WaitGroup
-	var cmds [][]string
-
-	prevPos := 0
-	for k, v := range args {
-		if v == "|" {
-			cmds = append(cmds, args[prevPos:k])
-			prevPos = k + 1
-		}
-	}
-
-	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
-
-	if len(cmds) == 0 {
-		cmds = [][]string{args}
-	}
-
-	if prevPos != 0 && prevPos < len(args) {
-		cmds = append(cmds, args[prevPos:])
-	}
-
-	var channel []*Chan
-	wg.Add(len(cmds))
-	defer wg.Wait()
-
-	for k, v := range cmds {
-		channel = append(channel, &Chan{
-			done: make(chan lua.LValue),
-			ch:   make(chan lua.LValue, 1000),
-		})
-
-		go func(ch []*Chan, k int, v []string) {
-			defer func() {
-				wg.Done()
-			}()
-
-			m := Message{
-				Out:     ch[k].ch,
-				OutDone: ch[k].done,
-				K:       k,
-			}
-
-			if k > 0 {
-				m.In = ch[k-1].ch
-				m.InDone = ch[k-1].done
-			}
-
-			//fmt.Printf("k=%d, %#v\n", k, m)
-			wsurlMain(m, name, v)
-		}(channel, k, v)
-	}
 }

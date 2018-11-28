@@ -4,14 +4,15 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"github.com/guonaihong/gurl/gurlib"
 	"github.com/yuin/gopher-lua"
 	"io"
-	"io/ioutil"
+	_ "io/ioutil"
 	"net"
 	"os"
 	"strconv"
 	"strings"
-	"sync"
+	_ "sync"
 	"time"
 )
 
@@ -90,7 +91,7 @@ func (g *Conn) Copy(dst io.Writer, src io.Reader) (int64, error) {
 	return total, nil
 }
 
-func cancelled(message Message) bool {
+func cancelled(message gurlib.Message) bool {
 	select {
 	case <-message.InDone:
 		return true
@@ -99,7 +100,8 @@ func cancelled(message Message) bool {
 	}
 }
 
-func (g *Conn) LuaMain(message Message) {
+/*
+func (g *Conn) LuaMain(message gurlib.Message) {
 
 	conf := g.Conf
 	kargs := g.KArgs
@@ -172,6 +174,7 @@ func (g *Conn) LuaMain(message Message) {
 	}
 
 }
+*/
 
 func (g *Conn) tcpWork(c net.Conn) {
 	to := g.TimeOut

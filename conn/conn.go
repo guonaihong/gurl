@@ -7,9 +7,8 @@ package conn
 import (
 	"fmt"
 	"github.com/guonaihong/flag"
-	"github.com/yuin/gopher-lua"
+	"github.com/guonaihong/gurl/gurlib"
 	"io"
-	"log"
 	"net"
 	"os"
 	"os/signal"
@@ -64,7 +63,7 @@ func (c *Conn) Producer() {
 	}()
 }
 
-func connMain(message Message, argv0 string, argv []string) {
+func Main(message gurlib.Message, argv0 string, argv []string) {
 	commandlLine := flag.NewFlagSet(argv0, flag.ExitOnError)
 
 	listen := commandlLine.Bool("l", false, "Listen mode, for inbound connects")
@@ -120,7 +119,7 @@ func connMain(message Message, argv0 string, argv []string) {
 			return
 		}
 
-		conn.LuaMain(message)
+		//conn.LuaMain(message)
 		return
 	}
 
@@ -325,65 +324,4 @@ end:
 			break end
 		}
 	}
-}
-
-type Chan struct {
-	ch   chan lua.LValue
-	done chan lua.LValue
-}
-
-func Main(name string, args []string) {
-
-	var wg sync.WaitGroup
-	var cmds [][]string
-
-	prevPos := 0
-	for k, v := range args {
-		if v == "|" {
-			cmds = append(cmds, args[prevPos:k])
-			prevPos = k + 1
-		}
-	}
-
-	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
-
-	if len(cmds) == 0 {
-		cmds = [][]string{args}
-	}
-
-	if prevPos != 0 && prevPos < len(args) {
-		cmds = append(cmds, args[prevPos:])
-	}
-
-	wg.Add(len(cmds))
-
-	var channel []*Chan
-
-	for k, v := range cmds {
-		channel = append(channel, &Chan{
-			done: make(chan lua.LValue, 2),
-			ch:   make(chan lua.LValue, 1000),
-		})
-
-		go func(ch []*Chan, k int, v []string) {
-			defer func() {
-				wg.Done()
-			}()
-
-			m := Message{
-				Out:     ch[k].ch,
-				OutDone: ch[k].done,
-			}
-
-			if k > 0 {
-				m.In = ch[k-1].ch
-				m.InDone = ch[k-1].done
-			}
-
-			//fmt.Printf("k=%d, %#v\n", k, m)
-			connMain(m, name, v)
-		}(channel, k, v)
-	}
-
-	wg.Wait()
 }
