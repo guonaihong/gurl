@@ -5,6 +5,7 @@ import (
 	"github.com/guonaihong/flag"
 	"github.com/guonaihong/gurl/gurlib"
 	url2 "github.com/guonaihong/gurl/gurlib/url"
+	"github.com/guonaihong/gurl/input"
 	"io"
 	_ "io/ioutil"
 	"net"
@@ -332,6 +333,23 @@ func (cmd *GurlCmd) LuaMain(message gurlib.Message) {
 }
 */
 
+func inputProcess(fileName string, fields string) {
+	out, err := input.ReadFile(fileName, fields)
+	if err != nil {
+		fmt.Printf("%s\n", err)
+		os.Exit(1)
+	}
+
+	select {
+	case v, ok := <-out.JsonOut:
+		if !ok {
+			return
+		}
+		fmt.Printf("%s\n", v)
+
+	}
+}
+
 func Main(message gurlib.Message, argv0 string, argv []string) {
 	commandlLine := flag.NewFlagSet(argv0, flag.ExitOnError)
 
@@ -362,8 +380,17 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 	duration := commandlLine.String("duration", "", "Duration of the test")
 	connectTimeout := commandlLine.String("connect-timeout", "", "Maximum time allowed for connection")
 
+	inputMode := commandlLine.Bool("input", false, "open input mode")
+	inputRead := commandlLine.String("input-read", "", "open input file")
+	inputFields := commandlLine.String("input-fields", " ", "sets the field separator")
+
 	commandlLine.Author("guonaihong https://github.com/guonaihong/gurl")
 	commandlLine.Parse(argv)
+
+	if *inputMode {
+		inputProcess(*inputRead, *inputFields)
+		return
+	}
 
 	if *listen != "" {
 		httpEcho(*listen)
@@ -428,15 +455,17 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 	g.AddFormStr(*formStrings)
 	g.AddJsonFormStr(*jfaStrings)
 
-	if *gen {
-		if len(*conf) > 0 {
-			Lua2Cmd(*conf, *kargs)
+	/*
+		if *gen {
+			if len(*conf) > 0 {
+				Lua2Cmd(*conf, *kargs)
+				return
+			}
+
+			Cmd2Lua(&g)
 			return
 		}
-
-		Cmd2Lua(&g)
-		return
-	}
+	*/
 
 	cmd := GurlCmd{
 		duration: *duration,
@@ -451,21 +480,25 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 		bench:    *bench,
 	}
 
-	if len(*cronExpr) > 0 {
-		//cmd.Cron(&client)
-	}
+	/*
+		if len(*cronExpr) > 0 {
+			cmd.Cron(&client)
+		}
+	*/
 
 	cmd.Producer()
 
-	if len(*conf) > 0 {
-		g.O = ""
-		//cmd.LuaMain(message) 重构中，先注释该代码
+	/*
+		if len(*conf) > 0 {
+			g.O = ""
+			//cmd.LuaMain(message) 重构中，先注释该代码
 
-		if *bench {
-			//TODO
+			if *bench {
+				//TODO
+			}
+			return
 		}
-		return
-	}
+	*/
 
 	if *bench {
 		g.O = ""
