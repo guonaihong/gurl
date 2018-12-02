@@ -42,8 +42,30 @@ func (cmd *GurlCmd) Producer() {
 	work, n := cmd.work, cmd.n
 
 	if len(cmd.duration) > 0 {
+
 		if t := gurlib.ParseTime(cmd.duration); int(t) > 0 {
 			cmd.n = -1
+
+			ticker := time.NewTicker(t)
+			go func() {
+
+				defer func() {
+					close(work)
+					for range work {
+					}
+				}()
+
+				for {
+					select {
+					case <-ticker.C:
+						return
+					case work <- struct{}{}:
+					}
+
+				}
+
+			}()
+			return
 		}
 	}
 
@@ -72,6 +94,7 @@ func (cmd *GurlCmd) main() {
 	defer os.Exit(0)
 
 	var report *gurlib.Report
+
 	c, n := cmd.c, cmd.n
 	g := cmd.Gurl
 	url := g.Url
@@ -97,34 +120,9 @@ func (cmd *GurlCmd) main() {
 
 	if len(cmd.duration) > 0 {
 		if t := gurlib.ParseTime(cmd.duration); int(t) > 0 {
-			wg.Add(1)
-
 			if report != nil {
 				report.SetDuration(t)
 			}
-			workTimeout := make(chan struct{}, 1000)
-			work = workTimeout
-
-			ticker := time.NewTicker(t)
-			go func() {
-
-				defer func() {
-					close(workTimeout)
-					for range workTimeout {
-					}
-					wg.Done()
-				}()
-
-				for {
-					select {
-					case <-ticker.C:
-						return
-					case workTimeout <- struct{}{}:
-					}
-
-				}
-
-			}()
 		}
 	}
 
@@ -189,6 +187,7 @@ func (cmd *GurlCmd) main() {
 	if report != nil {
 		report.StartReport()
 	}
+
 	go func() {
 		wg.Wait()
 		done <- struct{}{}
@@ -340,13 +339,15 @@ func inputProcess(fileName string, fields string) {
 		os.Exit(1)
 	}
 
-	select {
-	case v, ok := <-out.JsonOut:
-		if !ok {
-			return
-		}
-		fmt.Printf("%s\n", v)
+	for {
+		select {
+		case v, ok := <-out.JsonOut:
+			if !ok {
+				return
+			}
+			fmt.Printf("%s\n", v)
 
+		}
 	}
 }
 
