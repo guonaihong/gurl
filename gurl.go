@@ -32,14 +32,26 @@ type GurlCmd struct {
 	conf     string
 	KArgs    string
 	cronExpr string
-	work     chan struct{}
+	work     chan string
 	wg       sync.WaitGroup
 	bench    bool
 	*gurlib.Gurl
+	readStream bool
+	gurlib.Message
 }
 
 func (cmd *GurlCmd) Producer() {
 	work, n := cmd.work, cmd.n
+
+	if cmd.readStream {
+		go func() {
+			for v := range cmd.In {
+				work <- v
+			}
+			close(work)
+		}()
+		return
+	}
 
 	if len(cmd.duration) > 0 {
 
@@ -59,7 +71,7 @@ func (cmd *GurlCmd) Producer() {
 					select {
 					case <-ticker.C:
 						return
-					case work <- struct{}{}:
+					case work <- "":
 					}
 
 				}
@@ -75,15 +87,16 @@ func (cmd *GurlCmd) Producer() {
 		if cmd.n >= 0 {
 
 			for i := 0; i < n; i++ {
-				work <- struct{}{}
+				work <- ""
 			}
 
 			return
 		}
 
 		for {
-			work <- struct{}{}
+			work <- ""
 		}
+
 		return
 
 	}()
@@ -129,7 +142,7 @@ func (cmd *GurlCmd) main() {
 	if interval > 0 {
 		count := 0
 		oldwork := work
-		work = make(chan struct{}, 1000)
+		work = make(chan string, 1000)
 		wg.Add(1)
 		go func() {
 			defer func() {
@@ -149,7 +162,7 @@ func (cmd *GurlCmd) main() {
 				default:
 				}
 
-				work <- struct{}{}
+				work <- ""
 				if count++; count == n {
 					return
 				}
@@ -164,7 +177,12 @@ func (cmd *GurlCmd) main() {
 		go func(id int) {
 			defer wg.Done()
 
-			for range work {
+			for v := range work {
+				if v[0] == '{' {
+					fmt.Printf("read work:%s\n", v)
+					continue
+				}
+
 				taskNow := time.Now()
 				rsp, err := g.Send()
 				if err != nil {
@@ -332,12 +350,14 @@ func (cmd *GurlCmd) LuaMain(message gurlib.Message) {
 }
 */
 
-func inputProcess(fileName string, fields string) {
+func inputProcess(fileName string, fields string, message gurlib.Message) {
 	out, err := input.ReadFile(fileName, fields)
 	if err != nil {
 		fmt.Printf("%s\n", err)
 		os.Exit(1)
 	}
+
+	defer close(message.Out)
 
 	for {
 		select {
@@ -345,8 +365,7 @@ func inputProcess(fileName string, fields string) {
 			if !ok {
 				return
 			}
-			fmt.Printf("%s\n", v)
-
+			message.Out <- v
 		}
 	}
 }
@@ -380,6 +399,7 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 	agent := commandlLine.String("A, user-agent", "gurl", "Send User-Agent STRING to server")
 	duration := commandlLine.String("duration", "", "Duration of the test")
 	connectTimeout := commandlLine.String("connect-timeout", "", "Maximum time allowed for connection")
+	readStream := commandlLine.Bool("rs, read-stream", false, "Read data from the stream")
 
 	inputMode := commandlLine.Bool("input", false, "open input mode")
 	inputRead := commandlLine.String("input-read", "", "open input file")
@@ -389,7 +409,7 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 	commandlLine.Parse(argv)
 
 	if *inputMode {
-		inputProcess(*inputRead, *inputFields)
+		inputProcess(*inputRead, *inputFields, message)
 		return
 	}
 
@@ -469,16 +489,18 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 	*/
 
 	cmd := GurlCmd{
-		duration: *duration,
-		c:        *ac,
-		n:        *an,
-		rate:     *rate,
-		conf:     *conf,
-		KArgs:    *kargs,
-		cronExpr: *cronExpr,
-		Gurl:     &g,
-		work:     make(chan struct{}, 1000),
-		bench:    *bench,
+		duration:   *duration,
+		c:          *ac,
+		n:          *an,
+		rate:       *rate,
+		conf:       *conf,
+		KArgs:      *kargs,
+		cronExpr:   *cronExpr,
+		Gurl:       &g,
+		work:       make(chan string, 1000),
+		bench:      *bench,
+		readStream: *readStream,
+		Message:    message,
 	}
 
 	/*
