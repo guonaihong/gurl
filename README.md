@@ -28,10 +28,10 @@ Usage of gurl:
 ```
 
 #### websocket 子命用法
-* [websocket](https://github.com/guonaihong/wsurl/blob/master/README.md)
+* [websocket](./wsurl/README.md)
 
 #### tcp, udp 子命令用法
-* [tcp udp](https://github.com/guonaihong/conn/blob/master/README.md)
+* [tcp udp](./conn/README.md)
 
 #### http 子命令用法
 ```console
