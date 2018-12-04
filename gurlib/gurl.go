@@ -44,6 +44,23 @@ type GurlCore struct {
 	NotParseAt map[string]struct{}
 }
 
+func CopyAndNew(g *GurlCore) *GurlCore {
+	return &GurlCore{
+		Method:    g.Method,
+		J:         append([]string{}, g.J...),
+		F:         append([]string{}, g.F...),
+		H:         append([]string{}, g.H...),
+		Url:       g.Url,
+		O:         g.O,
+		Jfa:       append([]string{}, g.Jfa...),
+		FormCache: append([]FormVal{}, g.FormCache...),
+		Body:      append([]byte{}, g.Body...),
+		Flag:      g.Flag,
+		V:         g.V,
+		A:         g.A,
+	}
+}
+
 func (g *GurlCore) AddFormStr(F []string) {
 	if len(F) == 0 {
 		return

@@ -1,6 +1,7 @@
 package gurl
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/guonaihong/flag"
 	"github.com/guonaihong/gurl/gurlib"
@@ -102,6 +103,30 @@ func (cmd *GurlCmd) Producer() {
 	}()
 }
 
+func parse(g *gurlib.Gurl, inJson string) {
+	val := map[string]string{}
+
+	err := json.Unmarshal([]byte(inJson), &val)
+	if err != nil {
+		fmt.Printf("%s\n", err)
+		return
+	}
+
+	i := 0
+	rs := make([]string, len(val)*2)
+	for k, v := range val {
+
+		rs[i] = "{" + k + "}"
+		i++
+		rs[i] = v
+		i++
+	}
+
+	r := strings.NewReplacer(rs...)
+	g.Url = r.Replace(g.Url)
+	g.Body = []byte(r.Replace(string(g.Body)))
+}
+
 func (cmd *GurlCmd) main() {
 
 	defer os.Exit(0)
@@ -117,7 +142,6 @@ func (cmd *GurlCmd) main() {
 
 	sig := make(chan os.Signal, 1)
 	done := make(chan struct{}, 1)
-
 	signal.Notify(sig, os.Interrupt)
 
 	begin := time.Now()
@@ -174,13 +198,16 @@ func (cmd *GurlCmd) main() {
 
 		wg.Add(1)
 
-		go func(id int) {
+		go func(id int, g gurlib.Gurl) {
 			defer wg.Done()
 
+			g0 := gurlib.Gurl{Client: g.Client}
+			g0.GurlCore = *gurlib.CopyAndNew(&g.GurlCore)
 			for v := range work {
-				if v[0] == '{' {
-					fmt.Printf("read work:%s\n", v)
-					continue
+				if len(v) > 0 && v[0] == '{' {
+					g.GurlCore = *gurlib.CopyAndNew(&g.GurlCore)
+					parse(&g, v)
+					//fmt.Printf("read work:%s\n", v)
 				}
 
 				taskNow := time.Now()
@@ -197,9 +224,13 @@ func (cmd *GurlCmd) main() {
 				if report != nil {
 					report.Cal(taskNow, rsp)
 				}
+
+				if len(v) > 0 && v[0] == '{' {
+					g = g0
+				}
 			}
 
-		}(i)
+		}(i, *g)
 	}
 
 	if report != nil {
