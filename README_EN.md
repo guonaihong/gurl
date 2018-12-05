@@ -27,10 +27,10 @@ Usage of gurl:
     ws, websocket    Use the websocket subcommand
 ```
 #### websocket subcommand usage
-* [websocket](https://github.com/guonaihong/wsurl/blob/master/README.md)
+* [websocket](./wsurl/README.md)
 
 #### tcp, udp subcommand usage
-* [tcp udp](https://github.com/guonaihong/conn/blob/master/README.md)
+* [tcp udp](./conn/README.md)
 
 #### http subcommand usage
 ```console
