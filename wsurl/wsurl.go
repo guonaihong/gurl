@@ -430,7 +430,7 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 	ac := commandlLine.Int("ac", 1, "Number of multiple requests to make")
 	sendRate := commandlLine.String("send-rate", "", "How many bytes of data in seconds")
 	rate := commandlLine.Int("rate", 0, "Requests per second")
-	duration := commandlLine.String("Duration", "", "Duration of the test")
+	duration := commandlLine.String("duration", "", "Duration of the test")
 	bench := commandlLine.Bool("bench", false, "Run benchmarks test")
 	conf := commandlLine.String("K, config", "", "lua script")
 	firstSendAfter := commandlLine.String("fsa, first-send-after", "", "Wait for the first time before sending")
