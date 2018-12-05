@@ -236,6 +236,7 @@ func (ws *wsCmd) webSocketEcho(addr string) {
 	fmt.Println(http.ListenAndServe(addr, nil))
 }
 
+/*
 func cancelled(message gurlib.Message) bool {
 	select {
 	case <-message.InDone:
@@ -244,6 +245,7 @@ func cancelled(message gurlib.Message) bool {
 		return false
 	}
 }
+*/
 
 /*
 func (ws *wsCmd) LuaMain(message gurlib.Message) {

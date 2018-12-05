@@ -7,16 +7,15 @@ import (
 	"github.com/guonaihong/gurl/gurlib"
 	url2 "github.com/guonaihong/gurl/gurlib/url"
 	"github.com/guonaihong/gurl/input"
+	"github.com/guonaihong/gurl/task"
 	"io"
 	_ "io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
-	"os/signal"
 	"runtime"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 )
@@ -26,81 +25,13 @@ const (
 )
 
 type GurlCmd struct {
-	duration string
-	rate     int
-	c        int
-	n        int
+	task.Task
 	conf     string
 	KArgs    string
 	cronExpr string
-	work     chan string
-	wg       sync.WaitGroup
 	bench    bool
+	report   *gurlib.Report
 	*gurlib.Gurl
-	readStream bool
-	gurlib.Message
-}
-
-func (cmd *GurlCmd) Producer() {
-	work, n := cmd.work, cmd.n
-
-	if cmd.readStream {
-		go func() {
-			for v := range cmd.In {
-				work <- v
-			}
-			close(work)
-		}()
-		return
-	}
-
-	if len(cmd.duration) > 0 {
-
-		if t := gurlib.ParseTime(cmd.duration); int(t) > 0 {
-			cmd.n = -1
-
-			ticker := time.NewTicker(t)
-			go func() {
-
-				defer func() {
-					close(work)
-					for range work {
-					}
-				}()
-
-				for {
-					select {
-					case <-ticker.C:
-						return
-					case work <- "":
-					}
-
-				}
-
-			}()
-			return
-		}
-	}
-
-	go func() {
-
-		defer close(work)
-		if cmd.n >= 0 {
-
-			for i := 0; i < n; i++ {
-				work <- ""
-			}
-
-			return
-		}
-
-		for {
-			work <- ""
-		}
-
-		return
-
-	}()
 }
 
 func parse(g *gurlib.Gurl, inJson string) {
@@ -123,138 +54,77 @@ func parse(g *gurlib.Gurl, inJson string) {
 	}
 
 	r := strings.NewReplacer(rs...)
+	for k, v := range g.J {
+		g.J[k] = r.Replace(v)
+	}
+
+	for k, v := range g.F {
+		g.F[k] = r.Replace(v)
+	}
+
+	for k, v := range g.H {
+		g.H[k] = r.Replace(v)
+	}
+
+	for k, v := range g.Jfa {
+		g.Jfa[k] = r.Replace(v)
+	}
+
+	if len(g.A) > 0 {
+		g.A = r.Replace(g.A)
+	}
 	g.Url = r.Replace(g.Url)
+	g.O = r.Replace(g.O)
 	g.Body = []byte(r.Replace(string(g.Body)))
 }
 
-func (cmd *GurlCmd) main() {
-
-	defer os.Exit(0)
-
-	var report *gurlib.Report
-
-	c, n := cmd.c, cmd.n
-	g := cmd.Gurl
-	url := g.Url
-	work, wg := cmd.work, &cmd.wg
-
-	g.ParseInit()
-
-	sig := make(chan os.Signal, 1)
-	done := make(chan struct{}, 1)
-	signal.Notify(sig, os.Interrupt)
-
-	begin := time.Now()
-
-	interval := 0
-	if cmd.rate > 0 {
-		interval = int(time.Second) / cmd.rate
-	}
-
+func (cmd *GurlCmd) Init() {
+	cmd.Gurl.ParseInit()
 	if cmd.bench {
-		report = gurlib.NewReport(c, n, url)
-	}
-
-	if len(cmd.duration) > 0 {
-		if t := gurlib.ParseTime(cmd.duration); int(t) > 0 {
-			if report != nil {
-				report.SetDuration(t)
+		cmd.report = gurlib.NewReport(cmd.C, cmd.N, cmd.Gurl.Url) // todo
+		if len(cmd.Duration) > 0 {
+			if t := gurlib.ParseTime(cmd.Duration); int(t) > 0 {
+				cmd.report.SetDuration(t) // todo
 			}
 		}
+		cmd.report.StartReport()
 	}
+}
 
-	if interval > 0 {
-		count := 0
-		oldwork := work
-		work = make(chan string, 1000)
-		wg.Add(1)
-		go func() {
-			defer func() {
-				close(work)
-				wg.Done()
-			}()
-
-			for {
-				next := begin.Add(time.Duration(count * interval))
-				time.Sleep(next.Sub(time.Now()))
-
-				select {
-				case _, ok := <-oldwork:
-					if !ok {
-						return
-					}
-				default:
-				}
-
-				work <- ""
-				if count++; count == n {
-					return
-				}
-			}
-		}()
+func (cmd *GurlCmd) WaitAll() {
+	if cmd.report != nil {
+		cmd.report.Wait()
 	}
+}
 
-	for i := 0; i < c; i++ {
+func (cmd *GurlCmd) SubProcess(work chan string) {
+	g := *cmd.Gurl
+	g0 := gurlib.Gurl{Client: g.Client}
+	g0.GurlCore = *gurlib.CopyAndNew(&g.GurlCore)
+	for v := range work {
+		if len(v) > 0 && v[0] == '{' {
+			g.GurlCore = *gurlib.CopyAndNew(&g.GurlCore)
+			parse(&g, v)
+			//fmt.Printf("read work:%s\n", v)
+		}
 
-		wg.Add(1)
-
-		go func(id int, g gurlib.Gurl) {
-			defer wg.Done()
-
-			g0 := gurlib.Gurl{Client: g.Client}
-			g0.GurlCore = *gurlib.CopyAndNew(&g.GurlCore)
-			for v := range work {
-				if len(v) > 0 && v[0] == '{' {
-					g.GurlCore = *gurlib.CopyAndNew(&g.GurlCore)
-					parse(&g, v)
-					//fmt.Printf("read work:%s\n", v)
-				}
-
-				taskNow := time.Now()
-				rsp, err := g.Send()
-				if err != nil {
-					if report != nil {
-						report.AddErrNum()
-					} else {
-						CmdErr(err)
-					}
-					continue
-				}
-
-				if report != nil {
-					report.Cal(taskNow, rsp)
-				}
-
-				if len(v) > 0 && v[0] == '{' {
-					g = g0
-				}
+		taskNow := time.Now()
+		rsp, err := g.Send()
+		if err != nil {
+			if cmd.report != nil {
+				cmd.report.AddErrNum()
+			} else {
+				CmdErr(err)
 			}
+			continue
+		}
 
-		}(i, *g)
-	}
+		if cmd.report != nil {
+			cmd.report.Cal(taskNow, rsp)
+		}
 
-	if report != nil {
-		report.StartReport()
-	}
-
-	go func() {
-		wg.Wait()
-		done <- struct{}{}
-	}()
-
-end:
-	for {
-		select {
-		case <-sig:
-			if report != nil {
-				report.Wait()
-			}
-			break end
-		case <-done:
-			if report != nil {
-				report.Wait()
-			}
-			break end
+		if len(v) > 0 && v[0] == '{' {
+			g = g0
 		}
 	}
 }
@@ -313,6 +183,7 @@ func toFlag(output, str string) (flag int) {
 	return flag
 }
 
+/*
 func cancelled(message gurlib.Message) bool {
 	select {
 	case <-message.InDone:
@@ -321,6 +192,7 @@ func cancelled(message gurlib.Message) bool {
 		return false
 	}
 }
+*/
 
 /*
 func (cmd *GurlCmd) LuaMain(message gurlib.Message) {
@@ -381,8 +253,8 @@ func (cmd *GurlCmd) LuaMain(message gurlib.Message) {
 }
 */
 
-func inputProcess(fileName string, fields string, message gurlib.Message) {
-	out, err := input.ReadFile(fileName, fields)
+func inputProcess(fileName string, fields string, replaceKey string, message gurlib.Message) {
+	out, err := input.ReadFile(fileName, fields, replaceKey)
 	if err != nil {
 		fmt.Printf("%s\n", err)
 		os.Exit(1)
@@ -435,12 +307,13 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 	inputMode := commandlLine.Bool("input", false, "open input mode")
 	inputRead := commandlLine.String("input-read", "", "open input file")
 	inputFields := commandlLine.String("input-fields", " ", "sets the field separator")
+	inputReplaceKey := commandlLine.String("input-rkey", "", "Rename the default key")
 
 	commandlLine.Author("guonaihong https://github.com/guonaihong/gurl")
 	commandlLine.Parse(argv)
 
 	if *inputMode {
-		inputProcess(*inputRead, *inputFields, message)
+		inputProcess(*inputRead, *inputFields, *inputReplaceKey, message)
 		return
 	}
 
@@ -520,18 +393,21 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 	*/
 
 	cmd := GurlCmd{
-		duration:   *duration,
-		c:          *ac,
-		n:          *an,
-		rate:       *rate,
-		conf:       *conf,
-		KArgs:      *kargs,
-		cronExpr:   *cronExpr,
-		Gurl:       &g,
-		work:       make(chan string, 1000),
-		bench:      *bench,
-		readStream: *readStream,
-		Message:    message,
+		Task: task.Task{
+			Duration:   *duration,
+			N:          *an,
+			Work:       make(chan string, 1000),
+			ReadStream: *readStream,
+			Message:    message,
+			Rate:       *rate,
+			C:          *ac,
+		},
+
+		conf:     *conf,
+		KArgs:    *kargs,
+		cronExpr: *cronExpr,
+		Gurl:     &g,
+		bench:    *bench,
 	}
 
 	/*
@@ -558,5 +434,6 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 		g.O = ""
 	}
 
-	cmd.main()
+	cmd.Task.Processer = &cmd
+	cmd.Task.RunMain()
 }
