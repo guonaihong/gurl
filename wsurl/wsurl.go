@@ -5,17 +5,16 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/guonaihong/flag"
 	"github.com/guonaihong/gurl/gurlib"
+	"github.com/guonaihong/gurl/input"
+	"github.com/guonaihong/gurl/task"
 	url2 "github.com/guonaihong/gurl/wsurl/url"
-	"github.com/yuin/gopher-lua"
 	_ "io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
-	"os/signal"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 )
@@ -28,6 +27,7 @@ type wsClient struct {
 }
 
 type wsCmd struct {
+	task.Task
 	firstSendAfter string
 	A              string
 	header         []string
@@ -37,85 +37,11 @@ type wsCmd struct {
 	url            string
 	data           string
 	lastData       string
-	duration       string
 	reqHeader      http.Header
-	rate           int
 	mt             int
-	n              int
-	c              int
-	work           chan struct{}
 	closeMessage   bool
 	bench          bool
-}
-
-func ParseTime(t string) (rv time.Duration) {
-
-	t0 := 0
-	for k, _ := range t {
-		v := int(t[k])
-		switch {
-		case v >= '0' && v <= '9':
-			t0 = t0*10 + (v - '0')
-		case v == 's':
-			rv += time.Duration(t0) * time.Second
-			t0 = 0
-		case v == 'm':
-			if k+1 < len(t) && t[k+1] == 's' {
-				rv += time.Duration(t0) * time.Millisecond
-				t0 = 0
-				k++
-				continue
-			}
-			rv += time.Duration(t0*60) * time.Second
-			t0 = 0
-		case v == 'h':
-			rv += time.Duration(t0*60*60) * time.Second
-			t0 = 0
-		case v == 'd':
-			rv += time.Duration(t0*60*60*24) * time.Second
-			t0 = 0
-		case v == 'w':
-			rv += time.Duration(t0*60*60*24*7) * time.Second
-			t0 = 0
-		case v == 'M':
-			rv += time.Duration(t0*60*60*24*7*31) * time.Second
-			t0 = 0
-		case v == 'y':
-			rv += time.Duration(t0*60*60*24*7*31*365) * time.Second
-			t0 = 0
-		}
-	}
-
-	return
-}
-
-func (ws *wsCmd) Producer() {
-	work, n := ws.work, ws.n
-
-	if len(ws.duration) > 0 {
-		if t := ParseTime(ws.duration); int(t) > 0 {
-			n, ws.n = -1, -1
-		}
-	}
-
-	go func() {
-
-		defer close(work)
-		if n >= 0 {
-
-			for i := 0; i < n; i++ {
-				work <- struct{}{}
-			}
-
-			return
-		}
-
-		for {
-			work <- struct{}{}
-		}
-		return
-
-	}()
+	report         *Report
 }
 
 func (w *wsCmd) headersAdd() {
@@ -382,7 +308,7 @@ func (ws *wsCmd) one() (rv wsResult, err error) {
 	mt := ws.mt
 
 	if len(ws.firstSendAfter) > 0 {
-		if t := ParseTime(ws.firstSendAfter); int(t) > 0 {
+		if t := gurlib.ParseTime(ws.firstSendAfter); int(t) > 0 {
 			time.Sleep(t)
 		}
 	}
@@ -441,137 +367,59 @@ func CmdErr(err error) {
 	fmt.Printf("%s\n", err)
 }
 
-func (ws *wsCmd) main() {
-
-	var report *Report
-	wg := sync.WaitGroup{}
-	c := ws.c
-	n := ws.n
-	work := ws.work
-
-	sig := make(chan os.Signal, 1)
-	done := make(chan struct{}, 1)
-
-	signal.Notify(sig, os.Interrupt)
-
+func (ws *wsCmd) Init() {
 	if ws.bench {
-		report = NewReport(ws.c, ws.n, ws.url)
-		report.Start()
-	}
-
-	begin := time.Now()
-
-	interval := 0
-	if ws.rate > 0 {
-		interval = int(time.Second) / ws.rate
-	}
-
-	if len(ws.duration) > 0 {
-		if t := ParseTime(ws.duration); int(t) > 0 {
-			wg.Add(1)
-
-			if report != nil {
-				report.SetDuration(t)
+		ws.report = NewReport(ws.C, ws.N, ws.url)
+		if len(ws.Duration) > 0 {
+			if t := gurlib.ParseTime(ws.Duration); int(t) > 0 {
+				ws.report.SetDuration(t)
 			}
-			workTimeout := make(chan struct{}, 1000)
-			work = workTimeout
+		}
+		ws.report.Start()
+	}
+}
 
-			ticker := time.NewTicker(t)
-			go func() {
+func (ws *wsCmd) WaitAll() {
+	if ws.report != nil {
+		ws.report.Wait()
+	}
+}
 
-				defer func() {
-					close(workTimeout)
-					for range workTimeout {
-					}
-					wg.Done()
-				}()
+func (ws *wsCmd) SubProcess(work chan string) {
+	for range work {
+		taskNow := time.Now()
+		rv, err := ws.one()
+		if err != nil {
+			if ws.report != nil {
+				ws.report.AddErr()
+			} else {
+				CmdErr(err)
+			}
+			continue
+		}
 
-				for {
-					select {
-					case <-ticker.C:
-						return
-					case workTimeout <- struct{}{}:
-					}
-
-				}
-			}()
+		if ws.report != nil {
+			ws.report.Add(taskNow, rv.rb, rv.wb)
 		}
 	}
+}
 
-	if interval > 0 {
-		count := 0
-		oldwork := work
-		work = make(chan struct{}, 1000)
-		wg.Add(1)
-		go func() {
-			defer func() {
-				close(work)
-				wg.Done()
-			}()
-
-			for {
-				next := begin.Add(time.Duration(count * interval))
-				time.Sleep(next.Sub(time.Now()))
-
-				select {
-				case _, ok := <-oldwork:
-					if !ok {
-						return
-					}
-				default:
-				}
-
-				work <- struct{}{}
-				if count++; count == n {
-					return
-				}
-			}
-		}()
-	}
-	for i := 0; i < c; i++ {
-
-		wg.Add(1)
-		go func(id int) {
-			defer wg.Done()
-
-			for range work {
-				taskNow := time.Now()
-				rv, err := ws.one()
-				if err != nil {
-					if report != nil {
-						report.AddErr()
-					} else {
-						CmdErr(err)
-					}
-					continue
-				}
-
-				if report != nil {
-					report.Add(taskNow, rv.rb, rv.wb)
-				}
-			}
-
-		}(i)
+func inputProcess(fileName string, fields string, replaceKey string, message gurlib.Message) {
+	out, err := input.ReadFile(fileName, fields, replaceKey)
+	if err != nil {
+		fmt.Printf("%s\n", err)
+		os.Exit(1)
 	}
 
-	go func() {
-		wg.Wait()
-		done <- struct{}{}
-	}()
+	defer close(message.Out)
 
-end:
 	for {
 		select {
-		case <-sig:
-			if report != nil {
-				report.Wait()
+		case v, ok := <-out.JsonOut:
+			if !ok {
+				return
 			}
-			break end
-		case <-done:
-			if report != nil {
-				report.Wait()
-			}
-			break end
+			message.Out <- v
 		}
 	}
 }
@@ -582,7 +430,7 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 	ac := commandlLine.Int("ac", 1, "Number of multiple requests to make")
 	sendRate := commandlLine.String("send-rate", "", "How many bytes of data in seconds")
 	rate := commandlLine.Int("rate", 0, "Requests per second")
-	duration := commandlLine.String("duration", "", "Duration of the test")
+	duration := commandlLine.String("Duration", "", "Duration of the test")
 	bench := commandlLine.Bool("bench", false, "Run benchmarks test")
 	conf := commandlLine.String("K, config", "", "lua script")
 	firstSendAfter := commandlLine.String("fsa, first-send-after", "", "Wait for the first time before sending")
@@ -594,9 +442,20 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 	data := commandlLine.String("d, data", "", "Data to be send per connection")
 	lastData := commandlLine.String("ld, last-data", "", "Last message sent to be connection")
 	closeMessage := commandlLine.Bool("close", false, "Send close message")
+	readStream := commandlLine.Bool("rs, read-stream", false, "Read data from the stream")
+
+	inputMode := commandlLine.Bool("input", false, "open input mode")
+	inputRead := commandlLine.String("input-read", "", "open input file")
+	inputFields := commandlLine.String("input-fields", " ", "sets the field separator")
+	inputReplaceKey := commandlLine.String("input-rkey", "", "Rename the default key")
 
 	commandlLine.Author("guonaihong https://github.com/guonaihong/wsurl")
 	commandlLine.Parse(argv)
+
+	if *inputMode {
+		inputProcess(*inputRead, *inputFields, *inputReplaceKey, message)
+		return
+	}
 
 	if len(*conf) > 0 {
 		if _, err := os.Stat(*conf); os.IsNotExist(err) {
@@ -606,22 +465,26 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 	}
 
 	wscmd := &wsCmd{
+		Task: task.Task{
+			Duration:   *duration,
+			N:          *an,
+			Work:       make(chan string, 1000),
+			ReadStream: *readStream,
+			Message:    message,
+			Rate:       *rate,
+			C:          *ac,
+		},
 		firstSendAfter: *firstSendAfter,
 		header:         *headers,
 		conf:           *conf,
 		kArgs:          *kargs,
 		sendRate:       *sendRate,
-		rate:           *rate,
 		reqHeader:      make(map[string][]string, 3),
 		mt:             websocket.TextMessage,
 		data:           *data,
 		lastData:       *lastData,
-		duration:       *duration,
-		n:              *an,
-		c:              *ac,
 		closeMessage:   *closeMessage,
 		bench:          *bench,
-		work:           make(chan struct{}, 1000),
 	}
 
 	if *binary {
@@ -646,18 +509,7 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 		return
 	}
 	wscmd.url = url2.ModifyUrl(*URL)
-	wscmd.main()
-}
 
-type Message struct {
-	In      chan lua.LValue
-	Out     chan lua.LValue
-	InDone  chan lua.LValue
-	OutDone chan lua.LValue
-	K       int
-}
-
-type Chan struct {
-	ch   chan lua.LValue
-	done chan lua.LValue
+	wscmd.Task.Processer = wscmd
+	wscmd.Task.RunMain()
 }
