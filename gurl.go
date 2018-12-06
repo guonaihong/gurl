@@ -26,16 +26,17 @@ const (
 
 type GurlCmd struct {
 	task.Task
-	conf     string
-	KArgs    string
-	cronExpr string
-	bench    bool
-	report   *gurlib.Report
+	conf        string
+	KArgs       string
+	cronExpr    string
+	bench       bool
+	writeStream bool
+	merge       bool
+	report      *gurlib.Report
 	*gurlib.Gurl
 }
 
-func parse(g *gurlib.Gurl, inJson string) {
-	val := map[string]string{}
+func parse(val map[string]string, g *gurlib.Gurl, inJson string) {
 
 	err := json.Unmarshal([]byte(inJson), &val)
 	if err != nil {
@@ -97,19 +98,51 @@ func (cmd *GurlCmd) WaitAll() {
 	}
 }
 
+//todo
+func (cmd *GurlCmd) streamWriteJson(rsp *gurlib.Response, err error, inJson map[string]string) {
+	m := map[string]interface{}{}
+	m["status_code"] = fmt.Sprintf("%s", rsp.StatusCode)
+	m["err"] = err.Error()
+	m["body"] = string(rsp.Body)
+	m["header"] = rsp.Header
+
+	//todo
+	if cmd.merge {
+		for k, v := range inJson {
+			m[k] = v
+		}
+	}
+
+	all, err := json.Marshal(m)
+	if err != nil {
+		fmt.Printf("%s\n", err)
+		return
+	}
+
+	cmd.Out <- string(all)
+}
+
 func (cmd *GurlCmd) SubProcess(work chan string) {
 	g := *cmd.Gurl
 	g0 := gurlib.Gurl{Client: g.Client}
 	g0.GurlCore = *gurlib.CopyAndNew(&g.GurlCore)
+	var inJson map[string]string
+
 	for v := range work {
 		if len(v) > 0 && v[0] == '{' {
+			inJson = map[string]string{}
 			g.GurlCore = *gurlib.CopyAndNew(&g.GurlCore)
-			parse(&g, v)
+
+			parse(inJson, &g, v)
 			//fmt.Printf("read work:%s\n", v)
 		}
 
 		taskNow := time.Now()
 		rsp, err := g.Send()
+		if cmd.writeStream {
+			cmd.streamWriteJson(rsp, err, inJson)
+		}
+
 		if err != nil {
 			if cmd.report != nil {
 				cmd.report.AddErrNum()
@@ -253,26 +286,6 @@ func (cmd *GurlCmd) LuaMain(message gurlib.Message) {
 }
 */
 
-func inputProcess(fileName string, fields string, replaceKey string, message gurlib.Message) {
-	out, err := input.ReadFile(fileName, fields, replaceKey)
-	if err != nil {
-		fmt.Printf("%s\n", err)
-		os.Exit(1)
-	}
-
-	defer close(message.Out)
-
-	for {
-		select {
-		case v, ok := <-out.JsonOut:
-			if !ok {
-				return
-			}
-			message.Out <- v
-		}
-	}
-}
-
 func Main(message gurlib.Message, argv0 string, argv []string) {
 	commandlLine := flag.NewFlagSet(argv0, flag.ExitOnError)
 
@@ -303,17 +316,19 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 	duration := commandlLine.String("duration", "", "Duration of the test")
 	connectTimeout := commandlLine.String("connect-timeout", "", "Maximum time allowed for connection")
 	readStream := commandlLine.Bool("rs, read-stream", false, "Read data from the stream")
+	writeStream := commandlLine.Bool("ws, write-stream", false, "Write data from the stream")
+	merge := commandlLine.Bool("m, merge", false, "Combine the output results into the output")
 
 	inputMode := commandlLine.Bool("input", false, "open input mode")
 	inputRead := commandlLine.String("input-read", "", "open input file")
 	inputFields := commandlLine.String("input-fields", " ", "sets the field separator")
-	inputReplaceKey := commandlLine.String("input-rkey", "", "Rename the default key")
+	inputRenameKey := commandlLine.String("input-renkey", "", "Rename the default key")
 
 	commandlLine.Author("guonaihong https://github.com/guonaihong/gurl")
 	commandlLine.Parse(argv)
 
 	if *inputMode {
-		inputProcess(*inputRead, *inputFields, *inputReplaceKey, message)
+		input.Main(*inputRead, *inputFields, *inputRenameKey, message)
 		return
 	}
 
@@ -403,11 +418,13 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 			C:          *ac,
 		},
 
-		conf:     *conf,
-		KArgs:    *kargs,
-		cronExpr: *cronExpr,
-		Gurl:     &g,
-		bench:    *bench,
+		writeStream: *writeStream,
+		merge:       *merge,
+		conf:        *conf,
+		KArgs:       *kargs,
+		cronExpr:    *cronExpr,
+		Gurl:        &g,
+		bench:       *bench,
 	}
 
 	/*

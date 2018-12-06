@@ -404,26 +404,6 @@ func (ws *wsCmd) SubProcess(work chan string) {
 	}
 }
 
-func inputProcess(fileName string, fields string, replaceKey string, message gurlib.Message) {
-	out, err := input.ReadFile(fileName, fields, replaceKey)
-	if err != nil {
-		fmt.Printf("%s\n", err)
-		os.Exit(1)
-	}
-
-	defer close(message.Out)
-
-	for {
-		select {
-		case v, ok := <-out.JsonOut:
-			if !ok {
-				return
-			}
-			message.Out <- v
-		}
-	}
-}
-
 func Main(message gurlib.Message, argv0 string, argv []string) {
 	commandlLine := flag.NewFlagSet(argv0, flag.ExitOnError)
 	an := commandlLine.Int("an", 1, "Number of requests to perform")
@@ -447,13 +427,13 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 	inputMode := commandlLine.Bool("input", false, "open input mode")
 	inputRead := commandlLine.String("input-read", "", "open input file")
 	inputFields := commandlLine.String("input-fields", " ", "sets the field separator")
-	inputReplaceKey := commandlLine.String("input-rkey", "", "Rename the default key")
+	inputRenameKey := commandlLine.String("input-renkey", "", "Rename the default key")
 
 	commandlLine.Author("guonaihong https://github.com/guonaihong/wsurl")
 	commandlLine.Parse(argv)
 
 	if *inputMode {
-		inputProcess(*inputRead, *inputFields, *inputReplaceKey, message)
+		input.Main(*inputRead, *inputFields, *inputRenameKey, message)
 		return
 	}
 
