@@ -6,8 +6,8 @@ import (
 	"os"
 )
 
-func Main(fileName string, fields string, replaceKey string, message gurlib.Message) {
-	out, err := ReadFile(fileName, fields, replaceKey)
+func Main(fileName string, fields string, renameKey string, message gurlib.Message) {
+	out, err := ReadFile(fileName, fields, renameKey)
 	if err != nil {
 		fmt.Printf("%s\n", err)
 		os.Exit(1)

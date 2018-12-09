@@ -13,7 +13,7 @@ type StreamFile struct {
 	file    *os.File
 }
 
-func ReadFile(fileName string, fieldSeparator string, replaceKey string) (*StreamFile, error) {
+func ReadFile(fileName string, fieldSeparator string, renameKey string) (*StreamFile, error) {
 	file, err := os.Open(fileName)
 	if err != nil {
 		return nil, err
@@ -25,13 +25,13 @@ func ReadFile(fileName string, fieldSeparator string, replaceKey string) (*Strea
 
 	scanner := bufio.NewScanner(file)
 
-	replaceMap := map[string]string{}
+	renameMap := map[string]string{}
 
-	if len(replaceKey) > 0 {
-		defaultKeys := strings.FieldsFunc(replaceKey, func(r rune) bool { return r == ',' })
+	if len(renameKey) > 0 {
+		defaultKeys := strings.FieldsFunc(renameKey, func(r rune) bool { return r == ',' })
 		for _, v := range defaultKeys {
 			if pos := strings.Index(v, "="); pos != -1 {
-				replaceMap[v[:pos]] = v[pos+1:]
+				renameMap[v[pos+1:]] = v[:pos]
 			}
 		}
 	}
@@ -49,7 +49,7 @@ func ReadFile(fileName string, fieldSeparator string, replaceKey string) (*Strea
 			m := make(map[string]string)
 			for k, v := range ls {
 				colName := fmt.Sprintf("rf.col.%d", k)
-				newKey, ok := replaceMap[colName]
+				newKey, ok := renameMap[colName]
 				if ok {
 					m[newKey] = v
 					continue

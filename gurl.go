@@ -7,6 +7,7 @@ import (
 	"github.com/guonaihong/gurl/gurlib"
 	url2 "github.com/guonaihong/gurl/gurlib/url"
 	"github.com/guonaihong/gurl/input"
+	"github.com/guonaihong/gurl/output"
 	"github.com/guonaihong/gurl/task"
 	"io"
 	_ "io/ioutil"
@@ -96,15 +97,20 @@ func (cmd *GurlCmd) WaitAll() {
 	if cmd.report != nil {
 		cmd.report.Wait()
 	}
+	close(cmd.Message.Out)
 }
 
 //todo
 func (cmd *GurlCmd) streamWriteJson(rsp *gurlib.Response, err error, inJson map[string]string) {
 	m := map[string]interface{}{}
-	m["status_code"] = fmt.Sprintf("%s", rsp.StatusCode)
-	m["err"] = err.Error()
+	m["err"] = ""
+	m["status_code"] = fmt.Sprintf("%d", rsp.StatusCode)
 	m["body"] = string(rsp.Body)
 	m["header"] = rsp.Header
+
+	if err != nil {
+		m["err"] = err.Error()
+	}
 
 	//todo
 	if cmd.merge {
@@ -297,7 +303,7 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 	cronExpr := commandlLine.String("cron", "", "Cron expression")
 	conf := commandlLine.String("K, config", "", "lua script")
 	kargs := commandlLine.String("kargs", "", "Command line parameters passed to the configuration file")
-	output := commandlLine.String("o, output", "stdout", "Write to FILE instead of stdout")
+	outputFileName := commandlLine.String("o, output", "stdout", "Write to FILE instead of stdout")
 	oflag := commandlLine.String("oflag", "", "Control the way you write(append|line|trunc)")
 	method := commandlLine.String("X, request", "", "Specify request command to use")
 	gen := commandlLine.Bool("gen", false, "Generate the default lua script")
@@ -319,16 +325,25 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 	writeStream := commandlLine.Bool("ws, write-stream", false, "Write data from the stream")
 	merge := commandlLine.Bool("m, merge", false, "Combine the output results into the output")
 
-	inputMode := commandlLine.Bool("input", false, "open input mode")
+	inputMode := commandlLine.Bool("im, input-model", false, "open input mode")
 	inputRead := commandlLine.String("input-read", "", "open input file")
 	inputFields := commandlLine.String("input-fields", " ", "sets the field separator")
 	inputRenameKey := commandlLine.String("input-renkey", "", "Rename the default key")
+
+	outputMode := commandlLine.Bool("om, output-mode", false, "open output mode")
+	outputKey := commandlLine.String("output-key", "", "Key that can be output")
+	outputWrite := commandlLine.String("output-write", "", "open output file")
 
 	commandlLine.Author("guonaihong https://github.com/guonaihong/gurl")
 	commandlLine.Parse(argv)
 
 	if *inputMode {
 		input.Main(*inputRead, *inputFields, *inputRenameKey, message)
+		return
+	}
+
+	if *outputMode {
+		output.WriteFile(*outputWrite, *outputKey, message)
 		return
 	}
 
@@ -381,11 +396,11 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 			Method: *method,
 			F:      *forms,
 			H:      *headers,
-			O:      *output,
+			O:      *outputFileName,
 			J:      *toJson,
 			Jfa:    *jfa,
 			Url:    Url,
-			Flag:   toFlag(*output, *oflag),
+			Flag:   toFlag(*outputFileName, *oflag),
 			Body:   []byte(*data),
 			V:      *verbose,
 			A:      *agent,
