@@ -97,6 +97,7 @@ func (cmd *GurlCmd) WaitAll() {
 	if cmd.report != nil {
 		cmd.report.Wait()
 	}
+
 	close(cmd.Message.Out)
 }
 
@@ -326,13 +327,13 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 	merge := commandlLine.Bool("m, merge", false, "Combine the output results into the output")
 
 	inputMode := commandlLine.Bool("im, input-model", false, "open input mode")
-	inputRead := commandlLine.String("input-read", "", "open input file")
+	inputRead := commandlLine.String("ir, input-read", "", "open input file")
 	inputFields := commandlLine.String("input-fields", " ", "sets the field separator")
 	inputRenameKey := commandlLine.String("input-renkey", "", "Rename the default key")
 
 	outputMode := commandlLine.Bool("om, output-mode", false, "open output mode")
 	outputKey := commandlLine.String("output-key", "", "Key that can be output")
-	outputWrite := commandlLine.String("output-write", "", "open output file")
+	outputWrite := commandlLine.String("ow, output-write", "", "open output file")
 
 	commandlLine.Author("guonaihong https://github.com/guonaihong/gurl")
 	commandlLine.Parse(argv)

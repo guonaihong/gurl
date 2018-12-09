@@ -90,8 +90,6 @@ func (T *Task) Producer() {
 
 func (T *Task) RunMain() {
 
-	defer os.Exit(0)
-
 	work, wg := T.Work, &T.Wg
 
 	sig := make(chan os.Signal, 1)
