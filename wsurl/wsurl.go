@@ -1,11 +1,13 @@
 package wsurl
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/guonaihong/flag"
 	"github.com/guonaihong/gurl/gurlib"
 	"github.com/guonaihong/gurl/input"
+	"github.com/guonaihong/gurl/output"
 	"github.com/guonaihong/gurl/task"
 	url2 "github.com/guonaihong/gurl/wsurl/url"
 	_ "io/ioutil"
@@ -26,22 +28,38 @@ type wsClient struct {
 	url string
 }
 
-type wsCmd struct {
-	task.Task
+// 命令wsmd由几部分的数据组成
+// task.Task, 负责并发控制
+// wsCmdData(业务数据), 存放具体的数据，为并发模块提供燃料
+// bool类型
+// 报表, bench模式下，输出报表供人观看
+
+type wsCmdData struct {
 	firstSendAfter string
-	A              string
+	userAgent      string
 	header         []string
-	conf           string
-	kArgs          string
 	sendRate       string
 	url            string
 	data           string
 	lastData       string
+	output         string
 	reqHeader      http.Header
-	mt             int
-	closeMessage   bool
-	bench          bool
-	report         *Report
+}
+
+type wsCmd struct {
+	*task.Task
+
+	wsCmdData
+
+	mt           int
+	closeMessage bool
+	bench        bool
+
+	writeStream bool
+	merge       bool
+
+	outFd  *os.File
+	report *Report
 }
 
 func (w *wsCmd) headersAdd() {
@@ -60,8 +78,8 @@ func (w *wsCmd) headersAdd() {
 		w.reqHeader.Add(headers[0], headers[1])
 	}
 
-	if len(w.A) > 0 {
-		w.reqHeader.Set("User-Agent", w.A)
+	if len(w.userAgent) > 0 {
+		w.reqHeader.Set("User-Agent", w.userAgent)
 	}
 
 	w.reqHeader.Set("Accept", "*/*")
@@ -162,76 +180,6 @@ func (ws *wsCmd) webSocketEcho(addr string) {
 	fmt.Println(http.ListenAndServe(addr, nil))
 }
 
-/*
-func cancelled(message gurlib.Message) bool {
-	select {
-	case <-message.InDone:
-		return true
-	default:
-		return false
-	}
-}
-*/
-
-/*
-func (ws *wsCmd) LuaMain(message gurlib.Message) {
-
-	conf := ws.conf
-	kargs := ws.kArgs
-	all, err := ioutil.ReadFile(conf)
-	if err != nil {
-		fmt.Printf("ERROR:%s\n", err)
-		os.Exit(1)
-	}
-
-	wg := sync.WaitGroup{}
-	work := ws.work
-	c := ws.c
-
-	defer func() {
-		wg.Wait()
-		close(message.Out)
-		close(message.OutDone)
-	}()
-
-	for i := 0; i < c; i++ {
-
-		wg.Add(1)
-		go func(id int) {
-
-			defer wg.Done()
-
-				l := NewLuaEngine(kargs)
-				l.L.SetGlobal("in_ch", lua.LChannel(message.In))
-				l.L.SetGlobal("out_ch", lua.LChannel(message.Out))
-
-			for {
-
-				if ws.n != 0 {
-					select {
-					case _, ok := <-work:
-						if !ok {
-							return
-						}
-					}
-				} else {
-					if cancelled(message) && len(message.In) == 0 {
-						return
-					}
-				}
-
-				err = l.L.DoString(string(all))
-				if err != nil {
-					fmt.Printf("run lua script fail:%s\n", err)
-					os.Exit(1)
-				}
-			}
-
-		}(i)
-	}
-}
-*/
-
 type rate struct {
 	B int
 	T int64
@@ -292,8 +240,41 @@ func genRate(rateStr string, rv **rate) {
 }
 
 type wsResult struct {
-	wb int
-	rb int
+	wb       int
+	rb       int
+	lastBody []byte
+}
+
+func (ws *wsCmd) outputFileNew() {
+
+	var err error
+
+	if ws.output != "" {
+		switch ws.output {
+		case "stdout":
+			ws.outFd = os.Stdout
+		case "stderr":
+			ws.outFd = os.Stderr
+		default:
+			ws.outFd, err = os.OpenFile(ws.output, os.O_CREATE|os.O_RDWR, 0644)
+			if err != nil {
+				fmt.Printf("%s\n", err)
+			}
+		}
+	}
+}
+
+func (ws *wsCmd) outputFileWrite(m []byte) {
+	if ws.outFd != nil {
+		ws.outFd.Write(m)
+	}
+}
+
+func (ws *wsCmd) outputClose() {
+	if ws.outFd != nil {
+		ws.outFd.Close()
+	}
+
 }
 
 func (ws *wsCmd) one() (rv wsResult, err error) {
@@ -313,6 +294,8 @@ func (ws *wsCmd) one() (rv wsResult, err error) {
 		}
 	}
 
+	ws.outputFileNew()
+
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
@@ -323,9 +306,10 @@ func (ws *wsCmd) one() (rv wsResult, err error) {
 				return
 			}
 
+			rv.lastBody = m
 			rv.rb += len(m)
 			if !ws.bench {
-				os.Stdout.Write(m)
+				ws.outputFileWrite(m)
 			}
 		}
 	}()
@@ -347,6 +331,7 @@ func (ws *wsCmd) one() (rv wsResult, err error) {
 	}
 
 	<-done
+	ws.outputClose()
 	return
 }
 
@@ -383,12 +368,89 @@ func (ws *wsCmd) WaitAll() {
 	if ws.report != nil {
 		ws.report.Wait()
 	}
+	close(ws.Out)
 }
 
-func (ws *wsCmd) SubProcess(work chan string) {
-	for range work {
+func (ws *wsCmd) parse(val map[string]string, inJson string) {
+	err := json.Unmarshal([]byte(inJson), &val)
+	if err != nil {
+		fmt.Printf("%s\n", err)
+		return
+	}
+
+	i := 0
+	rs := make([]string, len(val)*2)
+	for k, v := range val {
+
+		rs[i] = "{" + k + "}"
+		i++
+		rs[i] = v
+		i++
+	}
+
+	r := strings.NewReplacer(rs...)
+	for k, v := range ws.header {
+		ws.header[k] = r.Replace(v)
+	}
+
+	ws.userAgent = r.Replace(ws.userAgent)
+	ws.url = r.Replace(ws.url)
+	ws.data = r.Replace(ws.data)
+	ws.lastData = r.Replace(ws.lastData)
+	ws.firstSendAfter = r.Replace(ws.firstSendAfter)
+}
+
+func (ws *wsCmd) copyAndNew() *wsCmdData {
+	return &wsCmdData{
+		firstSendAfter: ws.firstSendAfter,
+		userAgent:      ws.userAgent,
+		header:         append([]string{}, ws.header...),
+		sendRate:       ws.sendRate,
+		url:            ws.url,
+		data:           ws.data,
+		lastData:       ws.lastData,
+		output:         ws.output,
+		reqHeader:      make(map[string][]string, 3),
+	}
+}
+
+//todo
+func (cmd *wsCmd) streamWriteJson(rsp wsResult, err error, inJson map[string]string) {
+	m := map[string]interface{}{}
+	m["err"] = ""
+	m["last_body"] = string(rsp.lastBody)
+
+	if err != nil {
+		m["err"] = err.Error()
+	}
+
+	output.WriteStream(m, inJson, cmd.merge, cmd.Message)
+}
+
+func (cmd *wsCmd) SubProcess(work chan string) {
+
+	var inJson map[string]string
+
+	ws := *cmd
+	ws0 := *cmd
+	ws0.wsCmdData = *ws.copyAndNew()
+
+	for v := range work {
+
+		if len(v) > 0 && v[0] == '{' {
+			inJson = map[string]string{}
+			ws.wsCmdData = *ws.copyAndNew()
+			ws.parse(inJson, v)
+			ws.headersAdd()
+		}
+
 		taskNow := time.Now()
 		rv, err := ws.one()
+		if cmd.writeStream {
+			cmd.streamWriteJson(rv, err, inJson)
+		}
+		//todo Give this judgment a name
+
 		if err != nil {
 			if ws.report != nil {
 				ws.report.AddErr()
@@ -401,6 +463,10 @@ func (ws *wsCmd) SubProcess(work chan string) {
 		if ws.report != nil {
 			ws.report.Add(taskNow, rv.rb, rv.wb)
 		}
+
+		if len(v) > 0 && v[0] == '{' {
+			ws = ws0
+		}
 	}
 }
 
@@ -412,22 +478,29 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 	rate := commandlLine.Int("rate", 0, "Requests per second")
 	duration := commandlLine.String("duration", "", "Duration of the test")
 	bench := commandlLine.Bool("bench", false, "Run benchmarks test")
-	conf := commandlLine.String("K, config", "", "lua script")
+	outputFileName := commandlLine.String("o, output", "stdout", "Write to FILE instead of stdout")
 	firstSendAfter := commandlLine.String("fsa, first-send-after", "", "Wait for the first time before sending")
-	kargs := commandlLine.String("kargs", "", "Command line parameters passed to the configuration file")
 	URL := commandlLine.String("url", "", "Specify a URL to fetch")
 	headers := commandlLine.StringSlice("H, header", []string{}, "Pass custom header LINE to server (H)")
 	binary := commandlLine.Bool("binary", false, "Send binary messages instead of utf-8")
 	listen := commandlLine.String("l", "", "Listen mode, websocket echo server")
 	data := commandlLine.String("d, data", "", "Data to be send per connection")
+	userAgent := commandlLine.String("A, user-agent", "gurl", "Send User-Agent STRING to server")
 	lastData := commandlLine.String("ld, last-data", "", "Last message sent to be connection")
 	closeMessage := commandlLine.Bool("close", false, "Send close message")
-	readStream := commandlLine.Bool("rs, read-stream", false, "Read data from the stream")
 
-	inputMode := commandlLine.Bool("input", false, "open input mode")
-	inputRead := commandlLine.String("input-read", "", "open input file")
+	readStream := commandlLine.Bool("rs, read-stream", false, "Read data from the stream")
+	writeStream := commandlLine.Bool("ws, write-stream", false, "Write data from the stream")
+	merge := commandlLine.Bool("m, merge", false, "Combine the output results into the output")
+
+	inputMode := commandlLine.Bool("im, input-model", false, "open input mode")
+	inputRead := commandlLine.String("ir, input-read", "", "open input file")
 	inputFields := commandlLine.String("input-fields", " ", "sets the field separator")
 	inputRenameKey := commandlLine.String("input-renkey", "", "Rename the default key")
+
+	outputMode := commandlLine.Bool("om, output-mode", false, "open output mode")
+	outputKey := commandlLine.String("output-key", "", "Key that can be output")
+	outputWrite := commandlLine.String("ow, output-write", "", "open output file")
 
 	commandlLine.Author("guonaihong https://github.com/guonaihong/wsurl")
 	commandlLine.Parse(argv)
@@ -437,15 +510,13 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 		return
 	}
 
-	if len(*conf) > 0 {
-		if _, err := os.Stat(*conf); os.IsNotExist(err) {
-			fmt.Printf("%s\n", err)
-			return
-		}
+	if *outputMode {
+		output.WriteFile(*outputWrite, *outputKey, message)
+		return
 	}
 
 	wscmd := &wsCmd{
-		Task: task.Task{
+		Task: &task.Task{
 			Duration:   *duration,
 			N:          *an,
 			Work:       make(chan string, 1000),
@@ -454,17 +525,21 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 			Rate:       *rate,
 			C:          *ac,
 		},
-		firstSendAfter: *firstSendAfter,
-		header:         *headers,
-		conf:           *conf,
-		kArgs:          *kargs,
-		sendRate:       *sendRate,
-		reqHeader:      make(map[string][]string, 3),
-		mt:             websocket.TextMessage,
-		data:           *data,
-		lastData:       *lastData,
-		closeMessage:   *closeMessage,
-		bench:          *bench,
+		wsCmdData: wsCmdData{
+			firstSendAfter: *firstSendAfter,
+			header:         *headers,
+			sendRate:       *sendRate,
+			lastData:       *lastData,
+			data:           *data,
+			userAgent:      *userAgent,
+			reqHeader:      make(map[string][]string, 3),
+			output:         *outputFileName,
+		},
+		mt:           websocket.TextMessage,
+		closeMessage: *closeMessage,
+		bench:        *bench,
+		writeStream:  *writeStream,
+		merge:        *merge,
 	}
 
 	if *binary {
@@ -479,15 +554,12 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 	}
 
 	wscmd.Producer()
-	if len(*conf) > 0 {
-		//wscmd.LuaMain(message)
-		return
-	}
 
 	if *URL == "" {
 		commandlLine.Usage()
 		return
 	}
+
 	wscmd.url = url2.ModifyUrl(*URL)
 
 	wscmd.Task.Processer = wscmd

@@ -27,8 +27,6 @@ const (
 
 type GurlCmd struct {
 	task.Task
-	conf        string
-	KArgs       string
 	cronExpr    string
 	bench       bool
 	writeStream bool
@@ -113,24 +111,12 @@ func (cmd *GurlCmd) streamWriteJson(rsp *gurlib.Response, err error, inJson map[
 		m["err"] = err.Error()
 	}
 
+	output.WriteStream(m, inJson, cmd.merge, cmd.Message)
 	//todo
-	if cmd.merge {
-		for k, v := range inJson {
-			m[k] = v
-		}
-	}
-
-	all, err := json.Marshal(m)
-	if err != nil {
-		fmt.Printf("%s\n", err)
-		return
-	}
-
-	cmd.Out <- string(all)
 }
 
 func (cmd *GurlCmd) SubProcess(work chan string) {
-	g := *cmd.Gurl
+	g := *cmd.Gurl //这里是copy不是操作指针
 	g0 := gurlib.Gurl{Client: g.Client}
 	g0.GurlCore = *gurlib.CopyAndNew(&g.GurlCore)
 	var inJson map[string]string
@@ -223,76 +209,6 @@ func toFlag(output, str string) (flag int) {
 	return flag
 }
 
-/*
-func cancelled(message gurlib.Message) bool {
-	select {
-	case <-message.InDone:
-		return true
-	default:
-		return false
-	}
-}
-*/
-
-/*
-func (cmd *GurlCmd) LuaMain(message gurlib.Message) {
-
-	conf := cmd.conf
-	kargs := cmd.KArgs
-	all, err := ioutil.ReadFile(conf)
-	if err != nil {
-		fmt.Printf("ERROR:%s\n", err)
-		os.Exit(1)
-	}
-
-	wg := sync.WaitGroup{}
-
-	work := cmd.work
-
-	c := cmd.c
-
-	defer func() {
-		wg.Wait()
-		close(message.Out)
-		close(message.OutDone)
-	}()
-
-	for i := 0; i < c; i++ {
-
-		wg.Add(1)
-		go func(id int) {
-			defer wg.Done()
-
-			l := NewLuaEngine(cmd.Client, kargs)
-			l.L.SetGlobal("in_ch", lua.LChannel(message.In))
-			l.L.SetGlobal("out_ch", lua.LChannel(message.Out))
-
-			for {
-				if cmd.n != 0 {
-					select {
-					case _, ok := <-work:
-						if !ok {
-							return
-						}
-					}
-				} else {
-					if cancelled(message) && len(message.In) == 0 {
-						return
-					}
-				}
-
-				err = l.L.DoString(string(all))
-				if err != nil {
-					fmt.Printf("run lua script fail:%s\n", err)
-					os.Exit(1)
-				}
-			}
-		}(i)
-	}
-
-}
-*/
-
 func Main(message gurlib.Message, argv0 string, argv []string) {
 	commandlLine := flag.NewFlagSet(argv0, flag.ExitOnError)
 
@@ -302,12 +218,9 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 	jfa := commandlLine.StringSlice("Jfa", []string{}, "Specify HTTP multipart POST json data (H)")
 	jfaStrings := commandlLine.StringSlice("Jfa-string", []string{}, "Specify HTTP multipart POST json data (H)")
 	cronExpr := commandlLine.String("cron", "", "Cron expression")
-	conf := commandlLine.String("K, config", "", "lua script")
-	kargs := commandlLine.String("kargs", "", "Command line parameters passed to the configuration file")
 	outputFileName := commandlLine.String("o, output", "stdout", "Write to FILE instead of stdout")
 	oflag := commandlLine.String("oflag", "", "Control the way you write(append|line|trunc)")
 	method := commandlLine.String("X, request", "", "Specify request command to use")
-	gen := commandlLine.Bool("gen", false, "Generate the default lua script")
 	toJson := commandlLine.StringSlice("J", []string{}, `Turn key:value into {"key": "value"})`)
 	URL := commandlLine.String("url", "", "Specify a URL to fetch")
 	an := commandlLine.Int("an", 1, "Number of requests to perform")
@@ -319,9 +232,10 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 	listen := commandlLine.String("l", "", "Listen mode, HTTP echo server")
 	data := commandlLine.String("d, data", "", "HTTP POST data")
 	verbose := commandlLine.Bool("v, verbose", false, "Make the operation more talkative")
-	agent := commandlLine.String("A, user-agent", "gurl", "Send User-Agent STRING to server")
+	userAgent := commandlLine.String("A, user-agent", "gurl", "Send User-Agent STRING to server")
 	duration := commandlLine.String("duration", "", "Duration of the test")
 	connectTimeout := commandlLine.String("connect-timeout", "", "Maximum time allowed for connection")
+
 	readStream := commandlLine.Bool("rs, read-stream", false, "Read data from the stream")
 	writeStream := commandlLine.Bool("ws, write-stream", false, "Write data from the stream")
 	merge := commandlLine.Bool("m, merge", false, "Combine the output results into the output")
@@ -355,20 +269,13 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 
 	as := commandlLine.Args()
 	Url := *URL
-	if *URL == "" && len(as) == 0 && len(*conf) == 0 && !*gen && !*bench {
+	if *URL == "" && len(as) == 0 && !*bench {
 		commandlLine.Usage()
 		return
 	}
 
 	if len(as) > 0 {
 		Url = as[0]
-	}
-
-	if len(*conf) > 0 {
-		if _, err := os.Stat(*conf); os.IsNotExist(err) {
-			fmt.Printf("%s\n", err)
-			return
-		}
 	}
 
 	Url = url2.ModifyUrl(Url)
@@ -404,24 +311,12 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 			Flag:   toFlag(*outputFileName, *oflag),
 			Body:   []byte(*data),
 			V:      *verbose,
-			A:      *agent,
+			A:      *userAgent,
 		},
 	}
 
 	g.AddFormStr(*formStrings)
 	g.AddJsonFormStr(*jfaStrings)
-
-	/*
-		if *gen {
-			if len(*conf) > 0 {
-				Lua2Cmd(*conf, *kargs)
-				return
-			}
-
-			Cmd2Lua(&g)
-			return
-		}
-	*/
 
 	cmd := GurlCmd{
 		Task: task.Task{
@@ -436,8 +331,6 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 
 		writeStream: *writeStream,
 		merge:       *merge,
-		conf:        *conf,
-		KArgs:       *kargs,
 		cronExpr:    *cronExpr,
 		Gurl:        &g,
 		bench:       *bench,
@@ -450,18 +343,6 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 	*/
 
 	cmd.Producer()
-
-	/*
-		if len(*conf) > 0 {
-			g.O = ""
-			//cmd.LuaMain(message) 重构中，先注释该代码
-
-			if *bench {
-				//TODO
-			}
-			return
-		}
-	*/
 
 	if *bench {
 		g.O = ""

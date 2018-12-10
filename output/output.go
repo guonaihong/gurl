@@ -8,6 +8,22 @@ import (
 	"strings"
 )
 
+func WriteStream(rsp map[string]interface{}, inJson map[string]string, merge bool, message gurlib.Message) {
+	if merge {
+		for k, v := range inJson {
+			rsp[k] = v
+		}
+	}
+
+	all, err := json.Marshal(rsp)
+	if err != nil {
+		fmt.Printf("%s\n", err)
+		return
+	}
+
+	message.Out <- string(all)
+}
+
 func WriteFile(fileName string, onlyWriteKey string, message gurlib.Message) error {
 	var fd *os.File
 	var err error
@@ -25,7 +41,6 @@ func WriteFile(fileName string, onlyWriteKey string, message gurlib.Message) err
 		defer fd.Close()
 	}
 
-	//fmt.Printf("========\n")
 	onlyWriteMap := map[string]struct{}{}
 	if len(onlyWriteKey) > 0 {
 		onlyWriteList := strings.FieldsFunc(onlyWriteKey, func(r rune) bool { return r == ',' })
