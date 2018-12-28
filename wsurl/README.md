@@ -12,39 +12,59 @@ env GOPATH=`pwd` go build github.com/guonaihong/wsurl/wsurl
 ```console
 guonaihong https://github.com/guonaihong/wsurl
 
-Usage of wsurl:
+Usage of gurl:
+  -A, --user-agent string
+    	Send User-Agent STRING to server (default "gurl")
   -H, --header string[]
-        Pass custom header LINE to server (H)
-  -K, --config string
-        lua script
+    	Pass custom header LINE to server (H)
+  -I, --input-model
+    	open input mode
+  -O, --output-mode
+    	open output mode
+  -R, --input-read string
+    	open input file
+  -W, --output-write string
+    	open output file
   -ac int
-        Number of multiple requests to make (default 1)
+    	Number of multiple requests to make (default 1)
   -an int
-        Number of requests to perform (default 1)
+    	Number of requests to perform (default 1)
   -bench
-        Run benchmarks test
+    	Run benchmarks test
   -binary
-        Send binary messages instead of utf-8
+    	Send binary messages instead of utf-8
   -close
-        Send close message
+    	Send close message
   -d, --data string
-        Data to be send per connection
+    	Data to be send per connection
   -duration string
-        Duration of the test
+    	Duration of the test
   -fsa, --first-send-after string
-        Wait for the first time before sending
-  -kargs string
-        Command line parameters passed to the configuration file
+    	Wait for the first time before sending
+  -input-fields string
+    	sets the field separator (default " ")
   -l string
-        Listen mode, websocket echo server
+    	Listen mode, websocket echo server
   -ld, --last-data string
-        Last message sent to be connection
+    	Last message sent to be connection
+  -m, --merge
+    	Combine the output results into the output
+  -o, --output string
+    	Write to FILE instead of stdout (default "stdout")
+  -r, --read-stream
+    	Read data from the stream
   -rate int
-        Requests per second
+    	Requests per second
   -send-rate string
-        How many bytes of data in seconds
+    	How many bytes of data in seconds
+  -skey, --input-setkey string
+    	Set a new name for the default key
   -url string
-        Specify a URL to fetch
+    	Specify a URL to fetch
+  -w, --write-stream
+    	Write data from the stream
+  -wkey, --write-key string
+    	Key that can be write
 
 ```
 

@@ -489,24 +489,24 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 	lastData := commandlLine.String("ld, last-data", "", "Last message sent to be connection")
 	closeMessage := commandlLine.Bool("close", false, "Send close message")
 
-	readStream := commandlLine.Bool("rs, read-stream", false, "Read data from the stream")
-	writeStream := commandlLine.Bool("ws, write-stream", false, "Write data from the stream")
+	readStream := commandlLine.Bool("r, read-stream", false, "Read data from the stream")
+	writeStream := commandlLine.Bool("w, write-stream", false, "Write data from the stream")
 	merge := commandlLine.Bool("m, merge", false, "Combine the output results into the output")
 
-	inputMode := commandlLine.Bool("im, input-model", false, "open input mode")
-	inputRead := commandlLine.String("ir, input-read", "", "open input file")
+	inputMode := commandlLine.Bool("I, input-model", false, "open input mode")
+	inputRead := commandlLine.String("R, input-read", "", "open input file")
 	inputFields := commandlLine.String("input-fields", " ", "sets the field separator")
-	inputRenameKey := commandlLine.String("input-renkey", "", "Rename the default key")
+	inputSetKey := commandlLine.String("skey, input-setkey", "", "Set a new name for the default key")
 
-	outputMode := commandlLine.Bool("om, output-mode", false, "open output mode")
-	outputKey := commandlLine.String("output-key", "", "Key that can be output")
-	outputWrite := commandlLine.String("ow, output-write", "", "open output file")
+	outputMode := commandlLine.Bool("O, output-mode", false, "open output mode")
+	outputKey := commandlLine.String("wkey, write-key", "", "Key that can be write")
+	outputWrite := commandlLine.String("W, output-write", "", "open output file")
 
 	commandlLine.Author("guonaihong https://github.com/guonaihong/wsurl")
 	commandlLine.Parse(argv)
 
 	if *inputMode {
-		input.Main(*inputRead, *inputFields, *inputRenameKey, message)
+		input.Main(*inputRead, *inputFields, *inputSetKey, message)
 		return
 	}
 

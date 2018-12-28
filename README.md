@@ -39,55 +39,71 @@ guonaihong https://github.com/guonaihong/gurl
 
 Usage of gurl:
   -A, --user-agent string
-        Send User-Agent STRING to server (default "gurl")
+    	Send User-Agent STRING to server (default "gurl")
   -F, --form string[]
-        Specify HTTP multipart POST data (H)
+    	Specify HTTP multipart POST data (H)
   -H, --header string[]
-        Pass custom header LINE to server (H)
+    	Pass custom header LINE to server (H)
+  -I, --input-model
+    	open input mode
   -J string[]
-        Turn key:value into {"key": "value"})
+    	Turn key:value into {"key": "value"})
   -Jfa string[]
-        Specify HTTP multipart POST json data (H)
+    	Specify HTTP multipart POST json data (H)
   -Jfa-string string[]
-        Specify HTTP multipart POST json data (H)
-  -K, --config string
-        lua script
+    	Specify HTTP multipart POST json data (H)
+  -O, --output-mode
+    	open output mode
+  -R, --input-read string
+    	open input file
+  -W, --output-write string
+    	open output file
   -X, --request string
-        Specify request command to use
+    	Specify request command to use
   -ac int
-        Number of multiple requests to make (default 1)
+    	Number of multiple requests to make (default 1)
   -an int
-        Number of requests to perform (default 1)
+    	Number of requests to perform (default 1)
   -bench
-        Run benchmarks test
+    	Run benchmarks test
   -connect-timeout string
-        Maximum time allowed for connection
+    	Maximum time allowed for connection
   -conns int
-        Max open idle connections per target host (default 10000)
+    	Max open idle connections per target host (default 10000)
   -cpus int
-        Number of CPUs to use
+    	Number of CPUs to use
   -cron string
-        Cron expression
+    	Cron expression
   -d, --data string
-        HTTP POST data
+    	HTTP POST data
   -duration string
-        Duration of the test
+    	Duration of the test
   -form-string string[]
-        Specify HTTP multipart POST data (H)
-  -gen
-        Generate the default lua script
-  -kargs string
-        Command line parameters passed to the configuration file
+    	Specify HTTP multipart POST data (H)
+  -input-fields string
+    	sets the field separator (default " ")
   -l string
-        Listen mode, HTTP echo server
+    	Listen mode, HTTP echo server
+  -m, --merge
+    	Combine the output results into the output
   -o, --output string
-        Write to FILE instead of stdout (default "stdout")
+    	Write to FILE instead of stdout (default "stdout")
   -oflag string
-        Control the way you write(append|line|trunc)
+    	Control the way you write(append|line|trunc)
+  -r, --read-stream
+    	Read data from the stream
   -rate int
-        Requests per second
+    	Requests per second
+  -skey, --input-setkey string
+    	Set a new name for the default key
   -url string
-        Specify a URL to fetch
+    	Specify a URL to fetch
+  -v, --verbose
+    	Make the operation more talkative
+  -w, --write-stream
+    	Write data from the stream
+  -wkey, --write-key string
+    	Key that can be write
 ```
 ##### `-F 或 --form`
 设置form表单, 比如-F text=文本内容，或者-F text=@./从文件里面读取, -F 选项的语义和curl命令一样
