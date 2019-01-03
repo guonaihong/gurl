@@ -8,6 +8,7 @@ import (
 	"github.com/guonaihong/gurl/gurlib"
 	"github.com/guonaihong/gurl/input"
 	"github.com/guonaihong/gurl/output"
+	"github.com/guonaihong/gurl/report"
 	"github.com/guonaihong/gurl/task"
 	url2 "github.com/guonaihong/gurl/wsurl/url"
 	_ "io/ioutil"
@@ -59,7 +60,7 @@ type wsCmd struct {
 	merge       bool
 
 	outFd  *os.File
-	report *Report
+	report *report.Report
 }
 
 func (w *wsCmd) headersAdd() {
@@ -354,7 +355,7 @@ func CmdErr(err error) {
 
 func (ws *wsCmd) Init() {
 	if ws.bench {
-		ws.report = NewReport(ws.C, ws.N, ws.url)
+		ws.report = report.NewReport(ws.C, ws.N, ws.url)
 		if len(ws.Duration) > 0 {
 			if t := gurlib.ParseTime(ws.Duration); int(t) > 0 {
 				ws.report.SetDuration(t)

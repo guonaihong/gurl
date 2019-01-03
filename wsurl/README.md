@@ -159,25 +159,31 @@ Percentage of the requests served within a certain time (ms)
     99%    9.00ms
     100%   21.00ms
 ```
-##### `-K 或config`
--K选项可以执行lua script, 有关lua的用法，可以搜索下。
 
-##### `-kargs`
-该命令选选项主要从命令行传递参数给lua script
+#### 高级主题(stream功能)
+##### `-I`
+打开input模式
 
-下面的example讲如何使用wsurl执行lua脚本, 以下的代码都可以通过-K选现执行，-kargs "给脚本的命令行参数"
-* 发送websocket请求
-``` lua
-    local err = ws:connect(url, header)
-    if err ~= nil then
-        print("connect fail", err, "\n")
-        return
-    end
+##### `-R`
+打开列表文件, 可以使用-input-fields 指定分割符，默认是空格
 
-    ws:write("binary", "hello world")
-    local mt, body, err = ws:read()
-    if err ~= nil then
-        print("read fail", err, "\n")
-    end
-    ws:close()
-```
+##### `-skey`
+给默认的名字取个别名，相当于取个好听的变量名，方便后面引用
+
+##### `-r`
+从流里面读取数据
+
+##### `-w`
+结果输出到流
+
+##### `-merge`
+把输入流里面的结果和识别结果组成大的结果，写到输出流
+
+##### `-O`
+打开output模式
+
+##### `-wkey`
+控制写出的json key
+
+##### `|`
+管道符主要拼接多个gurl功能块

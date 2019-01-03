@@ -10,7 +10,6 @@ gurl 是http, websocket bench工具和curl的继承者
 * 支持curl常用命令行选项
 * 支持压测模式，可以根据并发数和线程数，也可以根据持续时间，也可以指定每秒并发数压测http, websocket, tcp服务
 * 定时运行gurl(支持cron表达式)
-* 支持lua语言作为配置文件(可以写if, else, for, func)
 * url 支持简写
 * 支持管道模式
 
@@ -104,6 +103,7 @@ Usage of gurl:
     	Write data from the stream
   -wkey, --write-key string
     	Key that can be write
+
 ```
 ##### `-F 或 --form`
 设置form表单, 比如-F text=文本内容，或者-F text=@./从文件里面读取, -F 选项的语义和curl命令一样
@@ -222,12 +222,6 @@ Percentage of the requests served within a certain time (ms)
   99%    0.31ms
  100%    1.34ms
 ```
-##### `|`
-管道模式, 主要为了串联多个lua脚本而设计，第1个脚本的输出，变成第2个脚本的输入
-```bash
- ./gurl http -an 1 -K ./producer.lua -kargs "-l all.txt" "|" -an 0 -ac 12 -K ./http_slice.lua -kargs "-appkey xx -url http://192.168.6.128:24990/asr/pcm " "|" -an 0 -K ./write_file.lua -kargs "-f asr.result"
-```
-
 ##### `-d 或 --data`
 发送http body数据到服务端, 支持@符号打开一个文件, 如果不接@直接把-d后面字符串发送到服务端
 ```bash
@@ -291,18 +285,11 @@ good
 ./gurl http -H "header1:value1" -H "header2:value2" http://xxx.xxx.xxx.xxx:port
 ```
 
-##### `-cron`
-定时发送(每隔一秒从服务里取结果)
-```bash
-./gurl http -cron "@every 1s" -H "session-id:f0c371f1-f418-477c-92d4-129c16c8e4d5" http://127.0.0.1:12345/asr/result
-```
-
 ##### `-url`
 设置http url的地址, 可以使用简写
 * -url http://127.0.0.1:1234 --> 127.0.0.1:1234
 * -url http://127.0.0.1:1234 --> :1234
 * -url http://127.0.0.1/path --> /path
-
 
 ##### `-oflag`
 -oflag 一般和-o选项配合使用(控制写文件的行为)
@@ -310,93 +297,49 @@ good
 * -oflag line 如果服务端返回的结果，想使用换行符分隔  
 小提示: -oflag 后面的命令可以组合使用 "append|line"的意思是：把服务端的输出追加到某个文本中，并用'\n'分隔符
 
-##### `-gen`
-* 从命令行的数据生成配置文件(选项 -gen)
-```lua
-./gurl http -X POST -F mode=A -F text=good -F voice=@./good.opus -url http://127.0.0.1:24909/eval/opus -gen &>demo.lua 
 
-#todo
+#### 高级主题(stream功能)
+##### `-I`
+打开input模式
 
+##### `-R`
+打开列表文件, 可以使用-input-fields 指定分割符，默认是空格
+
+##### `-skey`
+给默认的名字取个别名，相当于取个好听的变量名，方便后面引用
+
+##### `-r`
+从流里面读取数据
+
+##### `-w`
+结果输出到流
+
+##### `-merge`
+把输入流里面的结果和识别结果组成大的结果，写到输出流
+
+##### `-O`
+打开output模式
+
+##### `-wkey`
+控制写出的json key
+
+##### `|`
+管道符主要拼接多个gurl功能块
+
+##### 批量访问多个url
+开5个线程访问url.list里面的url列表
 ```
-* 把配置文件转成命令行形式(选项-gen -K 配置文件)
-```bash
-gurl http -K demo.lua -gen
-gurl http -X POST -F mode=A -F text=good -F voice=@./good.opus -url http://127.0.0.1:24909/eval/opus
-```
+cat url.list
 
-#### `-K`
--K选项可以执行lua script，有关lua的用法，可以搜索下。
+github.com
+www.baidu.com
+www.qq.com
+www.taobao.com
 
-#### `-kargs`
-该命令选选项主要从命令行传递参数给lua script
-
-下面的example讲如何使用gurl内置的lua函数，以下代码都可以通过-K 选项执行，-kargs "这里是从给脚本的命令行参数"
-* 在配置文件里面解析命令行配置
-```lua
-    local flag = require("flag").new()
-    local opt = flag
-                :opt_str("f, file", "", "open audio file")
-                :opt_str("a, addr", "", "Remote service address")
-                :parse("-f ./tst.pcm -a 127.0.0.1:8080")
-
-
-    if  #opt["f"] == 0 or
-        #opt["file"] == 0 or
-        #opt["a"] == 0 or
-        #opt["addr"] == 0  then
-
-        opt.Usage()
-
-        return
-    end
-
-    for k, v in pairs(opt) do
-        print("cmd opt ("..k..") parse value ("..v..")")
-    end
-
-```
-* 发送http请求
-```lua
-    local http = require("http")
-    local rsp = http.send({
-        H = { 
-            "appkey:"..config.appkey,
-            "X-Number:"..xnumber,
-            "session-id:"..session_id,
-        },
-        MF = {
-            "voice=" .. bytes,
-        },
-        url = config.url
-    })
-
-    --print("bytes ("..bytes..")")
-    if #rsp["err"] ~= 0 then
-        print("rsp error is ".. rsp["err"])
-        return
-    end
-
-    if rsp["status_code"] == 200 then
-        body = rsp["body"]
-        if #rsp["body"] == 0 then
-             body = "{}"
-        end
-        print(json.format(body))
-    else
-        print("error http code".. rsp["status_code"])
-    end
-
+gurl http -I -R url.list -skey "url=rf.col.0" "|" -ac 5 -r -w -merge "{url}" -o "/dev/null" "|" -O -wkey "status_code"
 ```
 
-* sleep
-```lua
-    local time = require("time")
-    time.sleep("250ms")
-    time.sleep("1s")
-    time.sleep("1m")
-    time.sleep("1h")
-    time.sleep("1s250ms")
-```
 #### TODO
-* bugfix
-* 一些用着很顺手的功能添加
+* 集群模式
+* GUI
+* tcp,udp 模块改造* tcp,udp 

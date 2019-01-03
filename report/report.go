@@ -1,4 +1,4 @@
-package wsurl
+package report
 
 import (
 	"fmt"

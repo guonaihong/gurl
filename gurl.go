@@ -27,7 +27,7 @@ const (
 
 type GurlCmd struct {
 	task.Task
-	cronExpr    string
+	//cronExpr    string
 	bench       bool
 	writeStream bool
 	merge       bool
@@ -217,7 +217,7 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 	formStrings := commandlLine.StringSlice("form-string", []string{}, "Specify HTTP multipart POST data (H)")
 	jfa := commandlLine.StringSlice("Jfa", []string{}, "Specify HTTP multipart POST json data (H)")
 	jfaStrings := commandlLine.StringSlice("Jfa-string", []string{}, "Specify HTTP multipart POST json data (H)")
-	cronExpr := commandlLine.String("cron", "", "Cron expression")
+	//cronExpr := commandlLine.String("cron", "", "Cron expression")
 	outputFileName := commandlLine.String("o, output", "stdout", "Write to FILE instead of stdout")
 	oflag := commandlLine.String("oflag", "", "Control the way you write(append|line|trunc)")
 	method := commandlLine.String("X, request", "", "Specify request command to use")
@@ -331,9 +331,9 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 
 		writeStream: *writeStream,
 		merge:       *merge,
-		cronExpr:    *cronExpr,
-		Gurl:        &g,
-		bench:       *bench,
+		//cronExpr:    *cronExpr,
+		Gurl:  &g,
+		bench: *bench,
 	}
 
 	/*
