@@ -33,6 +33,7 @@ type GurlCmd struct {
 	merge       bool
 	report      *gurlib.Report
 	*gurlib.Gurl
+	debug bool
 }
 
 func parse(val map[string]string, g *gurlib.Gurl, inJson string) {
@@ -126,8 +127,17 @@ func (cmd *GurlCmd) SubProcess(work chan string) {
 			inJson = map[string]string{}
 			g.GurlCore = *gurlib.CopyAndNew(&g.GurlCore)
 
+			g.FormCache = nil
+			g.NotParseAt = nil
+
 			parse(inJson, &g, v)
+			g.ParseInit()
 			//fmt.Printf("read work:%s\n", v)
+		}
+
+		if cmd.debug {
+			fmt.Println("input data is:", v)
+			fmt.Printf("g.FormCache.len(%d)\n", len(g.FormCache))
 		}
 
 		taskNow := time.Now()
@@ -249,8 +259,15 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 	outputKey := commandlLine.String("wkey, write-key", "", "Key that can be write")
 	outputWrite := commandlLine.String("W, output-write", "", "open output file")
 
+	debug := commandlLine.Bool("debug", false, "open debug mode")
 	commandlLine.Author("guonaihong https://github.com/guonaihong/gurl")
 	commandlLine.Parse(argv)
+
+	if !*inputMode {
+		if len(*inputRead) > 0 {
+			*inputMode = true
+		}
+	}
 
 	if *inputMode {
 		input.Main(*inputRead, *inputFields, *inputSetKey, message)
@@ -334,6 +351,7 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 		//cronExpr:    *cronExpr,
 		Gurl:  &g,
 		bench: *bench,
+		debug: *debug,
 	}
 
 	/*

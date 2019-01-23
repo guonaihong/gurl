@@ -506,6 +506,12 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 	commandlLine.Author("guonaihong https://github.com/guonaihong/wsurl")
 	commandlLine.Parse(argv)
 
+	if !*inputMode {
+		if len(*inputRead) > 0 {
+			*inputMode = true
+		}
+	}
+
 	if *inputMode {
 		input.Main(*inputRead, *inputFields, *inputSetKey, message)
 		return
