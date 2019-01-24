@@ -80,7 +80,9 @@ func parse(val map[string]string, g *gurlib.Gurl, inJson string) {
 }
 
 func (cmd *GurlCmd) Init() {
-	cmd.Gurl.ParseInit()
+	if !cmd.ReadStream {
+		cmd.Gurl.ParseInit()
+	}
 	if cmd.bench {
 		cmd.report = gurlib.NewReport(cmd.C, cmd.N, cmd.Gurl.Url) // todo
 		if len(cmd.Duration) > 0 {
