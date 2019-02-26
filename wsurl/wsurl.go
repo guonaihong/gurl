@@ -36,13 +36,13 @@ type wsClient struct {
 // 报表, bench模式下，输出报表供人观看
 
 type wsCmdData struct {
+	packet         []string
 	firstSendAfter string
 	userAgent      string
 	header         []string
 	sendRate       string
 	url            string
-	data           string
-	lastData       string
+	lastPacket     string
 	output         string
 	reqHeader      http.Header
 }
@@ -315,12 +315,13 @@ func (ws *wsCmd) one() (rv wsResult, err error) {
 		}
 	}()
 
-	data := ws.data
-	wb := ws.write(c, mt, data)
-	rv.wb += wb
+	for _, v := range ws.packet {
+		wb := ws.write(c, mt, v)
+		rv.wb += wb
+	}
 
-	if len(ws.lastData) > 0 {
-		wb = ws.write(c, mt, ws.lastData)
+	if len(ws.lastPacket) > 0 {
+		wb := ws.write(c, mt, ws.lastPacket)
 		rv.wb += wb
 	}
 
@@ -396,8 +397,11 @@ func (ws *wsCmd) parse(val map[string]string, inJson string) {
 
 	ws.userAgent = r.Replace(ws.userAgent)
 	ws.url = r.Replace(ws.url)
-	ws.data = r.Replace(ws.data)
-	ws.lastData = r.Replace(ws.lastData)
+	for k, v := range ws.packet {
+		ws.packet[k] = r.Replace(v)
+	}
+
+	ws.lastPacket = r.Replace(ws.lastPacket)
 	ws.firstSendAfter = r.Replace(ws.firstSendAfter)
 }
 
@@ -408,8 +412,8 @@ func (ws *wsCmd) copyAndNew() *wsCmdData {
 		header:         append([]string{}, ws.header...),
 		sendRate:       ws.sendRate,
 		url:            ws.url,
-		data:           ws.data,
-		lastData:       ws.lastData,
+		packet:         append([]string{}, ws.packet...),
+		lastPacket:     ws.lastPacket,
 		output:         ws.output,
 		reqHeader:      make(map[string][]string, 3),
 	}
@@ -472,39 +476,42 @@ func (cmd *wsCmd) SubProcess(work chan string) {
 }
 
 func Main(message gurlib.Message, argv0 string, argv []string) {
-	commandlLine := flag.NewFlagSet(argv0, flag.ExitOnError)
-	an := commandlLine.Int("an", 1, "Number of requests to perform")
-	ac := commandlLine.Int("ac", 1, "Number of multiple requests to make")
-	sendRate := commandlLine.String("send-rate", "", "How many bytes of data in seconds")
-	rate := commandlLine.Int("rate", 0, "Requests per second")
-	duration := commandlLine.String("duration", "", "Duration of the test")
-	bench := commandlLine.Bool("bench", false, "Run benchmarks test")
-	outputFileName := commandlLine.String("o, output", "stdout", "Write to FILE instead of stdout")
-	firstSendAfter := commandlLine.String("fsa, first-send-after", "", "Wait for the first time before sending")
-	URL := commandlLine.String("url", "", "Specify a URL to fetch")
-	headers := commandlLine.StringSlice("H, header", []string{}, "Pass custom header LINE to server (H)")
-	binary := commandlLine.Bool("binary", false, "Send binary messages instead of utf-8")
-	listen := commandlLine.String("l", "", "Listen mode, websocket echo server")
-	data := commandlLine.String("d, data", "", "Data to be send per connection")
-	userAgent := commandlLine.String("A, user-agent", "gurl", "Send User-Agent STRING to server")
-	lastData := commandlLine.String("ld, last-data", "", "Last message sent to be connection")
-	closeMessage := commandlLine.Bool("close", false, "Send close message")
+	command := flag.NewFlagSet(argv0, flag.ExitOnError)
+	an := command.Int("an", 1, "Number of requests to perform")
+	ac := command.Int("ac", 1, "Number of multiple requests to make")
+	sendRate := command.String("send-rate", "", "How many bytes of data in seconds")
+	rate := command.Int("rate", 0, "Requests per second")
+	duration := command.String("duration", "", "Duration of the test")
+	bench := command.Bool("bench", false, "Run benchmarks test")
+	outputFileName := command.String("o, output", "stdout", "Write to FILE instead of stdout")
+	firstSendAfter := command.String("fsa, first-send-after", "", "Wait for the first time before sending")
+	URL := command.String("url", "", "Specify a URL to fetch")
+	headers := command.StringSlice("H, header", []string{}, "Pass custom header LINE to server (H)")
+	binary := command.Bool("binary", false, "Send binary messages instead of utf-8")
+	listen := command.String("l", "", "Listen mode, websocket echo server")
+	userAgent := command.String("A, user-agent", "gurl", "Send User-Agent STRING to server")
+	lastPacket := command.String("ld, last-packet", "", "The last packet is written to the connection")
+	closeMessage := command.Bool("close", false, "Send close message")
 
-	readStream := commandlLine.Bool("r, read-stream", false, "Read data from the stream")
-	writeStream := commandlLine.Bool("w, write-stream", false, "Write data from the stream")
-	merge := commandlLine.Bool("m, merge", false, "Combine the output results into the output")
+	readStream := command.Bool("r, read-stream", false, "Read data from the stream")
+	writeStream := command.Bool("w, write-stream", false, "Write data from the stream")
+	merge := command.Bool("m, merge", false, "Combine the output results into the output")
 
-	inputMode := commandlLine.Bool("I, input-model", false, "open input mode")
-	inputRead := commandlLine.String("R, input-read", "", "open input file")
-	inputFields := commandlLine.String("input-fields", " ", "sets the field separator")
-	inputSetKey := commandlLine.String("skey, input-setkey", "", "Set a new name for the default key")
+	inputMode := command.Bool("I, input-model", false, "open input mode")
+	inputRead := command.String("R, input-read", "", "open input file")
+	inputFields := command.String("input-fields", " ", "sets the field separator")
+	inputSetKey := command.String("skey, input-setkey", "", "Set a new name for the default key")
 
-	outputMode := commandlLine.Bool("O, output-mode", false, "open output mode")
-	outputKey := commandlLine.String("wkey, write-key", "", "Key that can be write")
-	outputWrite := commandlLine.String("W, output-write", "", "open output file")
+	outputMode := command.Bool("O, output-mode", false, "open output mode")
+	outputKey := command.String("wkey, write-key", "", "Key that can be write")
+	outputWrite := command.String("W, output-write", "", "open output file")
 
-	commandlLine.Author("guonaihong https://github.com/guonaihong/wsurl")
-	commandlLine.Parse(argv)
+	packet := command.Opt("p, packet", "Data packet to be send per connection").
+		Flags(flag.GreedyMode).
+		NewStringSlice([]string{})
+
+	command.Author("guonaihong https://github.com/guonaihong/wsurl")
+	command.Parse(argv)
 
 	if !*inputMode {
 		if len(*inputRead) > 0 {
@@ -533,11 +540,11 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 			C:          *ac,
 		},
 		wsCmdData: wsCmdData{
+			packet:         *packet,
 			firstSendAfter: *firstSendAfter,
 			header:         *headers,
 			sendRate:       *sendRate,
-			lastData:       *lastData,
-			data:           *data,
+			lastPacket:     *lastPacket,
 			userAgent:      *userAgent,
 			reqHeader:      make(map[string][]string, 3),
 			output:         *outputFileName,
@@ -563,7 +570,7 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 	wscmd.Producer()
 
 	if *URL == "" {
-		commandlLine.Usage()
+		command.Usage()
 		return
 	}
 

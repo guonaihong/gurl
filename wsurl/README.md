@@ -12,11 +12,11 @@ env GOPATH=`pwd` go build github.com/guonaihong/wsurl/wsurl
 ```console
 guonaihong https://github.com/guonaihong/wsurl
 
-Usage of gurl:
+Usage of ./gurl:
   -A, --user-agent string
     	Send User-Agent STRING to server (default "gurl")
   -H, --header string[]
-    	Pass custom header LINE to server (H)
+    	Pass custom header LINE to server (H) (default [])
   -I, --input-model
     	open input mode
   -O, --output-mode
@@ -35,8 +35,6 @@ Usage of gurl:
     	Send binary messages instead of utf-8
   -close
     	Send close message
-  -d, --data string
-    	Data to be send per connection
   -duration string
     	Duration of the test
   -fsa, --first-send-after string
@@ -45,12 +43,14 @@ Usage of gurl:
     	sets the field separator (default " ")
   -l string
     	Listen mode, websocket echo server
-  -ld, --last-data string
-    	Last message sent to be connection
+  -ld, --last-packet string
+    	The last packet is written to the connection
   -m, --merge
     	Combine the output results into the output
   -o, --output string
     	Write to FILE instead of stdout (default "stdout")
+  -p, --packet string[]
+    	Data packet to be send per connection
   -r, --read-stream
     	Read data from the stream
   -rate int
@@ -71,11 +71,11 @@ Usage of gurl:
 ##### `-H 或header`
 设置websocket 的header和http header类似
 
-##### `-d 或 --data`
+##### `-p 或 --packet`
 发送websocket body数据到服务端，支持@符号打开一个文件, 如果不接@直接把-d后面字符串发送到服务端
 ```bash
-  wsurl -d "good" :12345
-  wsurl -d "@./file" :12345
+  wsurl -p "good" :12345
+  wsurl -p "@./file" :12345
 ```
 ##### `-send-rate`
 ``` bash
