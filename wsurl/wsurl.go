@@ -490,7 +490,7 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 	binary := command.Bool("binary", false, "Send binary messages instead of utf-8")
 	listen := command.String("l", "", "Listen mode, websocket echo server")
 	userAgent := command.String("A, user-agent", "gurl", "Send User-Agent STRING to server")
-	lastPacket := command.String("ld, last-packet", "", "The last packet is written to the connection")
+	lastPacket := command.String("lp, last-packet", "", "The last packet is written to the connection")
 	closeMessage := command.Bool("close", false, "Send close message")
 
 	readStream := command.Bool("r, read-stream", false, "Read data from the stream")
