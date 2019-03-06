@@ -42,7 +42,6 @@ type wsCmdData struct {
 	header         []string
 	sendRate       string
 	url            string
-	lastPacket     string
 	output         string
 	reqHeader      http.Header
 }
@@ -279,10 +278,10 @@ func (ws *wsCmd) outputClose() {
 }
 
 func (ws *wsCmd) one() (rv wsResult, err error) {
+
 	var c *wsClient
 	c, err = newWsClient(ws.url, ws.reqHeader)
 	if err != nil {
-		//fmt.Printf("new ws client fail %s\n", err)
 		return
 	}
 	defer c.Close()
@@ -300,10 +299,11 @@ func (ws *wsCmd) one() (rv wsResult, err error) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
+
 		for {
 			_, m, err := c.ReadMessage()
 			if err != nil {
-				//fmt.Println("read fail:", err)
+				fmt.Println("read fail:", err)
 				return
 			}
 
@@ -317,11 +317,6 @@ func (ws *wsCmd) one() (rv wsResult, err error) {
 
 	for _, v := range ws.packet {
 		wb := ws.write(c, mt, v)
-		rv.wb += wb
-	}
-
-	if len(ws.lastPacket) > 0 {
-		wb := ws.write(c, mt, ws.lastPacket)
 		rv.wb += wb
 	}
 
@@ -401,7 +396,6 @@ func (ws *wsCmd) parse(val map[string]string, inJson string) {
 		ws.packet[k] = r.Replace(v)
 	}
 
-	ws.lastPacket = r.Replace(ws.lastPacket)
 	ws.firstSendAfter = r.Replace(ws.firstSendAfter)
 }
 
@@ -413,7 +407,6 @@ func (ws *wsCmd) copyAndNew() *wsCmdData {
 		sendRate:       ws.sendRate,
 		url:            ws.url,
 		packet:         append([]string{}, ws.packet...),
-		lastPacket:     ws.lastPacket,
 		output:         ws.output,
 		reqHeader:      make(map[string][]string, 3),
 	}
@@ -490,7 +483,6 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 	binary := command.Bool("binary", false, "Send binary messages instead of utf-8")
 	listen := command.String("l", "", "Listen mode, websocket echo server")
 	userAgent := command.String("A, user-agent", "gurl", "Send User-Agent STRING to server")
-	lastPacket := command.String("lp, last-packet", "", "The last packet is written to the connection")
 	closeMessage := command.Bool("close", false, "Send close message")
 
 	readStream := command.Bool("r, read-stream", false, "Read data from the stream")
@@ -544,7 +536,6 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 			firstSendAfter: *firstSendAfter,
 			header:         *headers,
 			sendRate:       *sendRate,
-			lastPacket:     *lastPacket,
 			userAgent:      *userAgent,
 			reqHeader:      make(map[string][]string, 3),
 			output:         *outputFileName,

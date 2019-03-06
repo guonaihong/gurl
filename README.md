@@ -260,7 +260,7 @@ Percentage of the requests served within a certain time (ms)
 ##### `-Jfa`
 向multipart字段中插入json数据
 ```bash
-./gurl http -Jfa text=DisplayText:good -Jfa text=Language:cn -Jfa text2=look:me -F text=good :12345
+./gurl http -Jfa text=DisplayText:good text=Language:cn text2=look:me -F text=good :12345
 
 --4361c4e6ae1b083e9e0508a7b40eb215bccd265c4bed00137cc7d112e890
 Content-Disposition: form-data; name="text"

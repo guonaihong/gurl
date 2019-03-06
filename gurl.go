@@ -222,48 +222,55 @@ func toFlag(output, str string) (flag int) {
 }
 
 func Main(message gurlib.Message, argv0 string, argv []string) {
-	commandlLine := flag.NewFlagSet(argv0, flag.ExitOnError)
+	command := flag.NewFlagSet(argv0, flag.ExitOnError)
 
-	headers := commandlLine.StringSlice("H, header", []string{}, "Pass custom header LINE to server (H)")
-	forms := commandlLine.StringSlice("F, form", []string{}, "Specify HTTP multipart POST data (H)")
-	formStrings := commandlLine.StringSlice("form-string", []string{}, "Specify HTTP multipart POST data (H)")
-	jfa := commandlLine.StringSlice("Jfa", []string{}, "Specify HTTP multipart POST json data (H)")
-	jfaStrings := commandlLine.StringSlice("Jfa-string", []string{}, "Specify HTTP multipart POST json data (H)")
-	//cronExpr := commandlLine.String("cron", "", "Cron expression")
-	outputFileName := commandlLine.String("o, output", "stdout", "Write to FILE instead of stdout")
-	oflag := commandlLine.String("oflag", "", "Control the way you write(append|line|trunc)")
-	method := commandlLine.String("X, request", "", "Specify request command to use")
-	toJson := commandlLine.StringSlice("J", []string{}, `Turn key:value into {"key": "value"})`)
-	URL := commandlLine.String("url", "", "Specify a URL to fetch")
-	an := commandlLine.Int("an", 1, "Number of requests to perform")
-	ac := commandlLine.Int("ac", 1, "Number of multiple requests to make")
-	rate := commandlLine.Int("rate", 0, "Requests per second")
-	bench := commandlLine.Bool("bench", false, "Run benchmarks test")
-	conns := commandlLine.Int("conns", DefaultConnections, "Max open idle connections per target host")
-	cpus := commandlLine.Int("cpus", 0, "Number of CPUs to use")
-	listen := commandlLine.String("l", "", "Listen mode, HTTP echo server")
-	data := commandlLine.String("d, data", "", "HTTP POST data")
-	verbose := commandlLine.Bool("v, verbose", false, "Make the operation more talkative")
-	userAgent := commandlLine.String("A, user-agent", "gurl", "Send User-Agent STRING to server")
-	duration := commandlLine.String("duration", "", "Duration of the test")
-	connectTimeout := commandlLine.String("connect-timeout", "", "Maximum time allowed for connection")
+	headers := command.StringSlice("H, header", []string{}, "Pass custom header LINE to server (H)")
+	forms := command.StringSlice("F, form", []string{}, "Specify HTTP multipart POST data (H)")
+	formStrings := command.StringSlice("form-string", []string{}, "Specify HTTP multipart POST data (H)")
 
-	readStream := commandlLine.Bool("r, read-stream", false, "Read data from the stream")
-	writeStream := commandlLine.Bool("w, write-stream", false, "Write data from the stream")
-	merge := commandlLine.Bool("m, merge", false, "Combine the output results into the output")
+	jfa := command.Opt("Jfa", "Specify HTTP multipart POST json data (H)").
+		Flags(flag.GreedyMode).
+		NewStringSlice([]string{})
 
-	inputMode := commandlLine.Bool("I, input-model", false, "open input mode")
-	inputRead := commandlLine.String("R, input-read", "", "open input file")
-	inputFields := commandlLine.String("input-fields", " ", "sets the field separator")
-	inputSetKey := commandlLine.String("skey, input-setkey", "", "Set a new name for the default key")
+	jfaStrings := command.Opt("Jfa-string", "Specify HTTP multipart POST json data (H)").
+		Flags(flag.GreedyMode).
+		NewStringSlice([]string{})
 
-	outputMode := commandlLine.Bool("O, output-mode", false, "open output mode")
-	outputKey := commandlLine.String("wkey, write-key", "", "Key that can be write")
-	outputWrite := commandlLine.String("W, output-write", "", "open output file")
+	//cronExpr := command.String("cron", "", "Cron expression")
+	outputFileName := command.String("o, output", "stdout", "Write to FILE instead of stdout")
+	oflag := command.String("oflag", "", "Control the way you write(append|line|trunc)")
+	method := command.String("X, request", "", "Specify request command to use")
+	toJson := command.StringSlice("J", []string{}, `Turn key:value into {"key": "value"})`)
+	URL := command.String("url", "", "Specify a URL to fetch")
+	an := command.Int("an", 1, "Number of requests to perform")
+	ac := command.Int("ac", 1, "Number of multiple requests to make")
+	rate := command.Int("rate", 0, "Requests per second")
+	bench := command.Bool("bench", false, "Run benchmarks test")
+	conns := command.Int("conns", DefaultConnections, "Max open idle connections per target host")
+	cpus := command.Int("cpus", 0, "Number of CPUs to use")
+	listen := command.String("l", "", "Listen mode, HTTP echo server")
+	data := command.String("d, data", "", "HTTP POST data")
+	verbose := command.Bool("v, verbose", false, "Make the operation more talkative")
+	userAgent := command.String("A, user-agent", "gurl", "Send User-Agent STRING to server")
+	duration := command.String("duration", "", "Duration of the test")
+	connectTimeout := command.String("connect-timeout", "", "Maximum time allowed for connection")
 
-	debug := commandlLine.Bool("debug", false, "open debug mode")
-	commandlLine.Author("guonaihong https://github.com/guonaihong/gurl")
-	commandlLine.Parse(argv)
+	readStream := command.Bool("r, read-stream", false, "Read data from the stream")
+	writeStream := command.Bool("w, write-stream", false, "Write data from the stream")
+	merge := command.Bool("m, merge", false, "Combine the output results into the output")
+
+	inputMode := command.Bool("I, input-model", false, "open input mode")
+	inputRead := command.String("R, input-read", "", "open input file")
+	inputFields := command.String("input-fields", " ", "sets the field separator")
+	inputSetKey := command.String("skey, input-setkey", "", "Set a new name for the default key")
+
+	outputMode := command.Bool("O, output-mode", false, "open output mode")
+	outputKey := command.String("wkey, write-key", "", "Key that can be write")
+	outputWrite := command.String("W, output-write", "", "open output file")
+
+	debug := command.Bool("debug", false, "open debug mode")
+	command.Author("guonaihong https://github.com/guonaihong/gurl")
+	command.Parse(argv)
 
 	if !*inputMode {
 		if len(*inputRead) > 0 {
@@ -286,10 +293,10 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 		return
 	}
 
-	as := commandlLine.Args()
+	as := command.Args()
 	Url := *URL
 	if *URL == "" && len(as) == 0 && !*bench {
-		commandlLine.Usage()
+		command.Usage()
 		return
 	}
 
