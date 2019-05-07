@@ -603,7 +603,7 @@ func (c *Conn) SubProcess(work chan string) {
 		rv, err := c.OnceClient(c.host, c.portOrPath)
 		if err != nil && err != io.EOF {
 			if c.report != nil {
-				c.report.AddErr()
+				c.report.AddErr(err)
 			} else {
 				cmdErr(err)
 			}

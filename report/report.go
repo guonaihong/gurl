@@ -3,6 +3,7 @@ package report
 import (
 	"fmt"
 	"sort"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -22,10 +23,12 @@ type Report struct {
 	writeBytes int64
 	allResult  chan result
 	allTimes   []float64
-	waitQuit   chan struct{}
-	quit       chan struct{}
-	startNow   time.Time
-	duration   time.Duration
+	sync.Mutex
+	errMap   map[string]int
+	waitQuit chan struct{}
+	quit     chan struct{}
+	startNow time.Time
+	duration time.Duration
 }
 
 func NewReport(c, n int, url string) *Report {
@@ -42,6 +45,7 @@ func NewReport(c, n int, url string) *Report {
 	r.quit = make(chan struct{})
 	r.waitQuit = make(chan struct{})
 	r.allResult = make(chan result, 1000)
+	r.errMap = make(map[string]int, 3)
 	r.startNow = time.Now()
 	return &r
 }
@@ -54,6 +58,13 @@ func (r *Report) report() {
 	fmt.Printf("Connected:                %d\n", r.connNum)
 	fmt.Printf("Disconnected:             %d\n", r.errN)
 	fmt.Printf("Failed:                   %d\n", r.errN)
+	if len(r.errMap) > 0 {
+		fmt.Printf("Failed message: ")
+		for message, count := range r.errMap {
+			fmt.Printf("%s:count(%d)\n", message, count)
+		}
+		fmt.Printf("\n")
+	}
 	//todo:Calculate the websocket protocol header
 	fmt.Printf("Total transferred:        %d\n", r.writeBytes)
 	fmt.Printf("Total received            %d\n", r.readBytes)
@@ -95,8 +106,11 @@ func (r *Report) SetDuration(t time.Duration) {
 	r.duration = t
 }
 
-func (r *Report) AddErr() {
+func (r *Report) AddErr(err error) {
 	atomic.AddInt32(&r.errN, int32(1))
+	r.Lock()
+	r.errMap[err.Error()]++
+	r.Unlock()
 }
 
 func genTimeStr(now time.Time) string {

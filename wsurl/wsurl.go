@@ -453,7 +453,7 @@ func (cmd *wsCmd) SubProcess(work chan string) {
 
 		if err != nil {
 			if ws.report != nil {
-				ws.report.AddErr()
+				ws.report.AddErr(err)
 			} else {
 				CmdErr(err)
 			}
@@ -477,6 +477,7 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 	sendRate := command.String("send-rate", "", "How many bytes of data in seconds")
 	rate := command.Int("rate", 0, "Requests per second")
 	duration := command.String("duration", "", "Duration of the test")
+	connectTimeout := command.String("connect-timeout", "", "Maximum time allowed for connection")
 	bench := command.Bool("bench", false, "Run benchmarks test")
 	outputFileName := command.String("o, output", "stdout", "Write to FILE instead of stdout")
 	firstSendAfter := command.String("fsa, first-send-after", "", "Wait for the first time before sending")
@@ -521,6 +522,10 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 	if *outputMode {
 		output.WriteFile(*outputWrite, *outputKey, message)
 		return
+	}
+
+	if len(*connectTimeout) > 0 {
+		websocket.DefaultDialer.HandshakeTimeout = gurlib.ParseTime(*connectTimeout)
 	}
 
 	wscmd := &wsCmd{
