@@ -271,7 +271,7 @@ func (ws *wsCmd) outputFileWrite(m []byte) {
 }
 
 func (ws *wsCmd) outputClose() {
-	if ws.outFd != nil {
+	if ws.outFd != nil && ws.outFd != os.Stdout {
 		ws.outFd.Close()
 	}
 
@@ -303,7 +303,9 @@ func (ws *wsCmd) one() (rv wsResult, err error) {
 		for {
 			_, m, err := c.ReadMessage()
 			if err != nil {
-				fmt.Println("read fail:", err)
+				if !websocket.IsCloseError(err, 1000) {
+					fmt.Println("read fail:", err)
+				}
 				return
 			}
 
