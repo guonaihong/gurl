@@ -240,7 +240,10 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 	outputFileName := command.String("o, output", "stdout", "Write to FILE instead of stdout")
 	oflag := command.String("oflag", "", "Control the way you write(append|line|trunc)")
 	method := command.String("X, request", "", "Specify request command to use")
-	toJson := command.StringSlice("J", []string{}, `Turn key:value into {"key": "value"})`)
+	toJson := command.Opt("J", `Turn key:value into {"key": "value"})`).
+		Flags(flag.GreedyMode).
+		NewStringSlice([]string{})
+
 	URL := command.String("url", "", "Specify a URL to fetch")
 	an := command.Int("an", 1, "Number of requests to perform")
 	ac := command.Int("ac", 1, "Number of multiple requests to make")

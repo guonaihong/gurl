@@ -233,7 +233,7 @@ Percentage of the requests served within a certain time (ms)
 -J 后面的key和value 会被组装成json字符串发送到服务端. key:value，其中value会被解释成字符串, key:=value，value会被解决成bool或者数字或者小数
   * 普通用法
 ```bash
-  ./gurl http -J username:admin -J passwd:123456 -J bool_val:=true  -J int_val:=3 -J float_val:=0.3 http://127.0.0.1:12345
+  ./gurl http -J username:admin passwd:123456 bool_val:=true  int_val:=3 float_val:=0.3 -url http://127.0.0.1:12345
   {
     "bool_val": true,
     "float_val": 0.3,
