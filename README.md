@@ -14,7 +14,7 @@ gurl 是http, websocket bench工具和curl的继承者
 
 #### install
 ```bash
-env GOPATH=`pwd` go get -u github.com/guonaihong/gurl/gurl
+env GOPATH=`pwd` go get -u github.com/guonaihong/gurl/
 ```
 
 #### gurl 主命令选项
@@ -31,9 +31,9 @@ Usage of gurl:
   -A, --user-agent string
     	Send User-Agent STRING to server (default "gurl")
   -F, --form string[]
-    	Specify HTTP multipart POST data (H)
+    	Specify HTTP multipart POST data (H) (default [])
   -H, --header string[]
-    	Pass custom header LINE to server (H)
+    	Pass custom header LINE to server (H) (default [])
   -I, --input-model
     	open input mode
   -J string[]
@@ -56,6 +56,8 @@ Usage of gurl:
     	Number of requests to perform (default 1)
   -bench
     	Run benchmarks test
+  -c, --color
+    	Color highlighting
   -connect-timeout string
     	Maximum time allowed for connection
   -conns int
@@ -64,10 +66,12 @@ Usage of gurl:
     	Number of CPUs to use
   -d, --data string
     	HTTP POST data
+  -debug
+    	open debug mode
   -duration string
     	Duration of the test
   -form-string string[]
-    	Specify HTTP multipart POST data (H)
+    	Specify HTTP multipart POST data (H) (default [])
   -input-fields string
     	sets the field separator (default " ")
   -l string
@@ -78,6 +82,8 @@ Usage of gurl:
     	Write to FILE instead of stdout (default "stdout")
   -oflag string
     	Control the way you write(append|line|trunc)
+  -q, --query string[]
+    	query string
   -r, --read-stream
     	Read data from the stream
   -rate int
@@ -220,19 +226,19 @@ Percentage of the requests served within a certain time (ms)
 ```
 
 ##### RESTful API
-`-J`
+`-J` 拼装json字段到body里面
 -J 后面的key和value 会被组装成json字符串发送到服务端. key:value，其中value会被解释成字符串, key:=value，value会被解决成bool或者数字或者小数
   * 普通用法
-```bash
-  ./gurl http -J username:admin passwd:123456 bool_val:=true  int_val:=3 float_val:=0.3 -url http://127.0.0.1:12345
-  {
-    "bool_val": true,
-    "float_val": 0.3,
-    "int_val": 3,
-    "passwd": "123456",
-    "username": "admin"
-  }
-```
+   ```bash
+    ./gurl http -J username:admin passwd:123456 bool_val:=true  int_val:=3 float_val:=0.3 -url http://127.0.0.1:12345
+    {
+        "bool_val": true,
+        "float_val": 0.3,
+        "int_val": 3,
+        "passwd": "123456",
+        "username": "admin"
+    }
+   ```
   * 嵌套用法
   ```bash
   ./gurl http -J a.b.c.d:=true -J a.b.c.e:=111 http://127.0.0.1:12345
@@ -247,7 +253,30 @@ Percentage of the requests served within a certain time (ms)
     }
   }
   ```
+##### 查询字符串
+`-q` 后跟查询字符串, key=val形式
 
+```bash
+gurl http -X POST -J hello:word startTime:123 endTime:456 -url :8080/test -vc -q appkey=hello world=hello
+> POST /test?appkey=hello&world=hello HTTP/1.1
+> Accept: */*
+> Host: 127.0.0.1:8080
+> User-Agent: gurl
+>
+
+< HTTP/1.1 200 OK
+< Date: Tue, 21 May 2019 12:39:13 GMT
+< Content-Length: 50
+< Content-Type: text/plain; charset=utf-8
+
+
+{
+  "endTime": "456",
+  "hello": "word",
+  "startTime": "123"
+}
+
+```
 ##### `-Jfa`
 向multipart字段中插入json数据
 ```bash

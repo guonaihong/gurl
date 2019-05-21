@@ -4,12 +4,16 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/TylerBrock/colorjson"
+	"github.com/fatih/color"
 	"github.com/guonaihong/flag"
+	color2 "github.com/guonaihong/gurl/color"
 	"io"
 	"io/ioutil"
 	"log"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -41,6 +45,8 @@ type GurlCore struct {
 	Flag       int
 	V          bool `json:"-"`
 	A          string
+	Color      bool
+	Query      []string
 	NotParseAt map[string]struct{}
 }
 
@@ -391,7 +397,7 @@ func (g *GurlCore) MultipartNew() (*http.Request, chan error, error) {
 	}()
 
 	var req *http.Request
-	req, err = http.NewRequest(g.Method, g.Url, pipeReader)
+	req, err = http.NewRequest(g.Method, g.Url+g.addQueryString(), pipeReader)
 	if err != nil {
 		fmt.Printf("http neq request:%s\n", err)
 		return nil, errChan, err
@@ -400,6 +406,29 @@ func (g *GurlCore) MultipartNew() (*http.Request, chan error, error) {
 	req.Header.Add("Content-Type", writer.FormDataContentType())
 
 	return req, errChan, nil
+}
+
+func (g *GurlCore) addQueryString() string {
+	if len(g.Query) == 0 {
+		return ""
+	}
+
+	u := url.Values{}
+	for _, g := range g.Query {
+		qs := strings.Split(g, "=")
+		if len(qs) != 2 {
+			continue
+		}
+
+		u.Add(qs[0], qs[1])
+	}
+
+	s := u.Encode()
+	if len(u) > 0 {
+		return "?" + s
+	}
+
+	return ""
 }
 
 func (g *GurlCore) HeadersAdd(req *http.Request) {
@@ -432,47 +461,78 @@ func (g *GurlCore) writeHead(rsp *Response, w io.Writer) {
 		return
 	}
 
+	keyStart, keyEnd, valStart, valEnd := color2.NewKeyVal(g.Color)
+
 	if rsp.Req != nil {
 		req := rsp.Req
 		path := "/"
 		if len(req.URL.Path) > 0 {
-			path = req.URL.Path
+			path = req.URL.RequestURI()
 		}
+
 		fmt.Fprintf(w, "> %s %s %s\r\n", req.Method, path, req.Proto)
 		for k, v := range req.Header {
-			fmt.Fprintf(w, "> %s: %s\r\n", k, strings.Join(v, ","))
+			fmt.Fprintf(w, "%s> %s%s: %s%s%s\r\n", keyStart, k, keyEnd,
+				valStart, strings.Join(v, ","), valEnd)
 		}
 
 		fmt.Fprint(w, ">\r\n")
+		fmt.Fprint(w, "\n")
 	}
 
 	fmt.Fprintf(w, "< %s %s\r\n", rsp.Proto, rsp.Status)
 	for k, v := range rsp.Header {
-		fmt.Fprintf(w, "< %s: %s\r\n", k, strings.Join(v, ","))
+		fmt.Fprintf(w, "%s< %s%s: %s%s%s\r\n", keyStart, k, keyEnd,
+			valStart, strings.Join(v, ","), valEnd)
 	}
 }
 
-func (g *GurlCore) writeBytes(rsp *Response) {
+func colorBody(fd *os.File, all []byte) ([]byte, bool) {
+	var obj map[string]interface{}
+	if len(all) > 0 && all[0] == '{' {
+		err := json.Unmarshal(all, &obj)
+		if err != nil {
+			return all, false
+		}
+
+		f := colorjson.NewFormatter()
+		f.KeyColor = color.New(color.FgHiBlue)
+		f.Indent = 2
+		all, _ = f.Marshal(obj)
+		all = append(all, '\n')
+	}
+
+	return all, true
+}
+
+func (g *GurlCore) writeBytes(rsp *Response) (err error) {
 	all := rsp.Body
-	if g.O == "stdout" {
-		g.writeHead(rsp, os.Stdout)
-		os.Stdout.Write(all)
-		return
+	var fd *os.File
+
+	switch g.O {
+	case "stdout":
+		fd = os.Stdout
+	case "stderr":
+		fd = os.Stderr
+	default:
+		fd, err = os.OpenFile(g.O, g.Flag, 0644)
+		if err != nil {
+			return
+		}
 	}
 
-	if g.O == "stderr" {
-		g.writeHead(rsp, os.Stderr)
-		os.Stderr.Write(all)
-		return
+	var colorOk bool
+	if g.Color {
+		all, colorOk = colorBody(fd, all)
 	}
 
-	fd, err := os.OpenFile(g.O, g.Flag, 0644)
-	if err != nil {
-		return
+	if fd != os.Stdout || fd != os.Stderr {
+		defer fd.Close()
 	}
-	defer fd.Close()
 
+	// write http head
 	g.writeHead(rsp, fd)
+
 	if g.Flag&ADD_LINE > 0 {
 		out := &bytes.Buffer{}
 		out.Write(all)
@@ -482,7 +542,11 @@ func (g *GurlCore) writeBytes(rsp *Response) {
 		return
 	}
 
+	if colorOk {
+		fd.Write([]byte("\n\n"))
+	}
 	fd.Write(all)
+	return nil
 }
 
 type Gurl struct {
@@ -527,7 +591,7 @@ func (g *GurlCore) GetOrBodyExec(client *http.Client) (*Response, error) {
 	var err error
 
 	body := bytes.NewBuffer(g.Body)
-	req, err = http.NewRequest(g.Method, g.Url, body)
+	req, err = http.NewRequest(g.Method, g.Url+g.addQueryString(), body)
 	gurlRsp := &Response{}
 	if err != nil {
 		return &Response{Err: err.Error()}, err
@@ -603,6 +667,7 @@ func (g *GurlCore) sendExec(client *http.Client) (*Response, error) {
 		return g.MultipartExec(client)
 	}
 
+	// 创建http.NewRequest地方有两个，todo归一化
 	return g.GetOrBodyExec(client)
 }
 
