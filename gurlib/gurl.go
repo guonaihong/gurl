@@ -141,7 +141,7 @@ func parseVal2(bodyJson map[string]interface{}, key, val string, notParseAt bool
 	bodyJson[key] = parseAt(val, notParseAt)
 }
 
-func toJson(J []string, notParseAt []bool, bodyJson map[string]interface{}) {
+func toJson(J []string, notParseAts []bool, bodyJson map[string]interface{}) {
 	for j, v := range J {
 		pos := strings.Index(v, ":")
 		if pos == -1 {
@@ -152,9 +152,9 @@ func toJson(J []string, notParseAt []bool, bodyJson map[string]interface{}) {
 		key := v[:pos]
 		val := v[pos+1:]
 
-		notParseAt2 := false
-		if len(notParseAt) > 0 {
-			notParseAt2 = notParseAt[j]
+		notParseAt := false
+		if len(notParseAts) > 0 {
+			notParseAt = notParseAts[j]
 		}
 
 		if pos := strings.Index(key, "."); pos != -1 {
@@ -172,7 +172,7 @@ func toJson(J []string, notParseAt []bool, bodyJson map[string]interface{}) {
 
 			for i, v := range keys {
 				if len(keys)-1 == i {
-					parseValfn(curMap, v, val, notParseAt2)
+					parseValfn(curMap, v, val, notParseAt)
 					break
 				}
 
@@ -189,12 +189,12 @@ func toJson(J []string, notParseAt []bool, bodyJson map[string]interface{}) {
 		}
 
 		if len(val) == 0 {
-			parseVal2(bodyJson, key, "", notParseAt2)
+			parseVal2(bodyJson, key, "", notParseAt)
 			continue
 		}
 
 		if val[0] != '=' {
-			parseVal2(bodyJson, key, val, notParseAt2)
+			parseVal2(bodyJson, key, val, notParseAt)
 			continue
 		}
 
@@ -203,7 +203,7 @@ func toJson(J []string, notParseAt []bool, bodyJson map[string]interface{}) {
 		}
 
 		val = val[1:]
-		parseVal(bodyJson, key, val, notParseAt2)
+		parseVal(bodyJson, key, val, notParseAt)
 
 	}
 }
@@ -293,7 +293,7 @@ func (g *GurlCore) jsonFromAppend(JF []string, fm *[]FormVal) {
 	*fm = append(*fm, formVals...)
 }
 
-func parseAt(data string, notParseAt bool) string {
+func parseAt(data string, notParseAt bool) interface{} {
 	if !notParseAt && strings.HasPrefix(data, "@") {
 		body, err := ioutil.ReadFile(data[1:])
 		if err != nil {
@@ -302,6 +302,15 @@ func parseAt(data string, notParseAt bool) string {
 		}
 		return string(body)
 	}
+
+	if len(data) >= 2 {
+		b := []byte(data)
+		if json.Valid(b) {
+
+			return json.RawMessage(b)
+		}
+	}
+
 	return data
 }
 
@@ -480,7 +489,16 @@ func (g *GurlCore) writeHead(rsp *Response, w io.Writer) {
 		fmt.Fprint(w, "\n")
 	}
 
+	if g.Color {
+		all, colorOk := colorBody(w.(*os.File), g.Body)
+		w.Write(all)
+		if colorOk {
+			fmt.Fprintf(w, "\r\n")
+		}
+	}
+
 	fmt.Fprintf(w, "< %s %s\r\n", rsp.Proto, rsp.Status)
+
 	for k, v := range rsp.Header {
 		fmt.Fprintf(w, "%s< %s%s: %s%s%s\r\n", keyStart, k, keyEnd,
 			valStart, strings.Join(v, ","), valEnd)
