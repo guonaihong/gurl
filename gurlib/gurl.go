@@ -676,7 +676,7 @@ func (g *GurlCore) SendExec(client *http.Client) (*Response, error) {
 func (g *GurlCore) sendExec(client *http.Client) (*Response, error) {
 	if len(g.Method) == 0 {
 		g.Method = "GET"
-		if len(g.FormCache) > 0 {
+		if len(g.FormCache) > 0 || len(g.Body) > 0 {
 			g.Method = "POST"
 		}
 	}
