@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/TylerBrock/colorjson"
 	"github.com/fatih/color"
-	"github.com/guonaihong/flag"
 	color2 "github.com/guonaihong/gurl/color"
 	"io"
 	"io/ioutil"
@@ -701,53 +700,4 @@ func ParseMF(mf string, formCache *[]FormVal) {
 	fv.Body = []byte(mf[pos+1:])
 	fv.Fname = "test"
 	*formCache = append(*formCache, fv)
-}
-
-func ExecSlice(cmd []string) (*Response, error) {
-
-	commandlLine := flag.NewFlagSet(cmd[0], flag.ExitOnError)
-	headers := commandlLine.StringSlice("H", []string{}, "Pass custom header LINE to server (H)")
-	forms := commandlLine.StringSlice("F", []string{}, "Specify HTTP multipart POST data (H)")
-	output := commandlLine.String("o", "", "Write to FILE instead of stdout")
-	method := commandlLine.String("X", "", "Specify request command to use")
-	memForms := commandlLine.StringSlice("mF", []string{}, "Specify HTTP multipart POST data (H)")
-	url := commandlLine.String("url", "", "Specify a URL to fetch")
-
-	commandlLine.Parse(cmd[1:])
-
-	as := commandlLine.Args()
-
-	transport := http.Transport{
-		DisableKeepAlives: true,
-	}
-
-	u := *url
-	if u == "" {
-		u = as[0]
-	}
-
-	g := Gurl{
-		Client: &http.Client{
-			Transport: &transport,
-		},
-		GurlCore: GurlCore{
-			Method: *method,
-			F:      *forms,
-			H:      *headers,
-			O:      *output,
-			Url:    u,
-		},
-	}
-
-	g.ParseInit()
-
-	formCache := []FormVal{}
-	for _, v := range *memForms {
-
-		ParseMF(v, &formCache)
-	}
-
-	g.GurlCore.FormCache = append(g.GurlCore.FormCache, formCache...)
-
-	return g.sendExec(g.Client)
 }

@@ -2,6 +2,7 @@
 #### Documentation
 * [English](./README_EN.md)
 
+[![Build Status](https://travis-ci.org/guonaihong/gurl.png)](https://travis-ci.org/guonaihong/gurl)
 #### 简介
 gurl 是http, websocket bench工具和curl的继承者
 
