@@ -173,7 +173,7 @@ func (g *Conn) ListenUdp() {
 
 	con, err := net.ListenUDP("udp", udpAddr)
 	if err != nil {
-		fmt.Printf("listen log at ", udpAddr, " error:", err)
+		fmt.Printf("listen log at %s, error: %s", udpAddr, err)
 		return
 	}
 
