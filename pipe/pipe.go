@@ -1,7 +1,7 @@
 package pipe
 
 import (
-	"github.com/guonaihong/gurl/gurlib"
+	"github.com/guonaihong/gurl/core"
 	"log"
 	"sync"
 )
@@ -11,7 +11,7 @@ type Chan struct {
 	done chan string
 }
 
-func Main(name string, args []string, subMain func(gurlib.Message, string, []string)) {
+func Main(name string, args []string, subMain func(core.Message, string, []string)) {
 
 	var wg sync.WaitGroup
 	var cmds [][]string
@@ -49,7 +49,7 @@ func Main(name string, args []string, subMain func(gurlib.Message, string, []str
 				wg.Done()
 			}()
 
-			m := gurlib.Message{
+			m := core.Message{
 				Out:     ch[k].ch,
 				OutDone: ch[k].done,
 				K:       k,

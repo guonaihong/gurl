@@ -1,16 +1,17 @@
-package wsurl
+package ws
 
 import (
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/guonaihong/flag"
-	"github.com/guonaihong/gurl/gurlib"
+	"github.com/guonaihong/gurl/core"
 	"github.com/guonaihong/gurl/input"
 	"github.com/guonaihong/gurl/output"
 	"github.com/guonaihong/gurl/report"
 	"github.com/guonaihong/gurl/task"
-	url2 "github.com/guonaihong/gurl/wsurl/url"
+	"github.com/guonaihong/gurl/utils"
+	url2 "github.com/guonaihong/gurl/ws/url"
 	_ "io/ioutil"
 	"log"
 	"net"
@@ -289,7 +290,7 @@ func (ws *wsCmd) one() (rv wsResult, err error) {
 	mt := ws.mt
 
 	if len(ws.firstSendAfter) > 0 {
-		if t := gurlib.ParseTime(ws.firstSendAfter); int(t) > 0 {
+		if t := utils.ParseTime(ws.firstSendAfter); int(t) > 0 {
 			time.Sleep(t)
 		}
 	}
@@ -342,7 +343,7 @@ func CmdErr(err error) {
 	if noerr, ok := err.(*net.OpError); ok {
 		if scerr, ok := noerr.Err.(*os.SyscallError); ok {
 			if scerr.Err == syscall.ECONNREFUSED {
-				fmt.Printf("wsurl: (7) couldn't connect to host\n")
+				fmt.Printf("ws: (7) couldn't connect to host\n")
 				os.Exit(7)
 			}
 		}
@@ -355,7 +356,7 @@ func (ws *wsCmd) Init() {
 	if ws.bench {
 		ws.report = report.NewReport(ws.C, ws.N, ws.url)
 		if len(ws.Duration) > 0 {
-			if t := gurlib.ParseTime(ws.Duration); int(t) > 0 {
+			if t := utils.ParseTime(ws.Duration); int(t) > 0 {
 				ws.report.SetDuration(t)
 			}
 		}
@@ -470,7 +471,7 @@ func (cmd *wsCmd) SubProcess(work chan string) {
 	}
 }
 
-func Main(message gurlib.Message, argv0 string, argv []string) {
+func Main(message core.Message, argv0 string, argv []string) {
 	command := flag.NewFlagSet(argv0, flag.ExitOnError)
 	an := command.Int("an", 1, "Number of requests to perform")
 	ac := command.Int("ac", 1, "Number of multiple requests to make")
@@ -505,7 +506,6 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 		Flags(flag.GreedyMode).
 		NewStringSlice([]string{})
 
-	command.Author("guonaihong https://github.com/guonaihong/wsurl")
 	command.Parse(argv)
 
 	if !*inputMode {
@@ -525,7 +525,7 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 	}
 
 	if len(*connectTimeout) > 0 {
-		websocket.DefaultDialer.HandshakeTimeout = gurlib.ParseTime(*connectTimeout)
+		websocket.DefaultDialer.HandshakeTimeout = utils.ParseTime(*connectTimeout)
 	}
 
 	wscmd := &wsCmd{

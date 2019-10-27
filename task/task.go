@@ -1,7 +1,8 @@
 package task
 
 import (
-	"github.com/guonaihong/gurl/gurlib"
+	"github.com/guonaihong/gurl/core"
+	"github.com/guonaihong/gurl/utils"
 	"os"
 	"os/signal"
 	"sync"
@@ -15,7 +16,7 @@ type Task struct {
 	N          int
 	C          int
 	Rate       int
-	gurlib.Message
+	core.Message
 	Wg sync.WaitGroup
 	Processer
 }
@@ -41,7 +42,7 @@ func (T *Task) Producer() {
 
 	if len(T.Duration) > 0 {
 
-		if t := gurlib.ParseTime(T.Duration); int(t) > 0 {
+		if t := utils.ParseTime(T.Duration); int(t) > 0 {
 			T.N = -1
 
 			ticker := time.NewTicker(t)

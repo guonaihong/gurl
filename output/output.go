@@ -3,12 +3,12 @@ package output
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/guonaihong/gurl/gurlib"
+	"github.com/guonaihong/gurl/core"
 	"os"
 	"strings"
 )
 
-func WriteStream(rsp map[string]interface{}, inJson map[string]string, merge bool, message gurlib.Message) {
+func WriteStream(rsp map[string]interface{}, inJson map[string]string, merge bool, message core.Message) {
 	if merge {
 		for k, v := range inJson {
 			rsp[k] = v
@@ -24,7 +24,7 @@ func WriteStream(rsp map[string]interface{}, inJson map[string]string, merge boo
 	message.Out <- string(all)
 }
 
-func WriteFile(fileName string, onlyWriteKey string, message gurlib.Message) error {
+func WriteFile(fileName string, onlyWriteKey string, message core.Message) error {
 	var fd *os.File
 	var err error
 
