@@ -2,11 +2,11 @@ package input
 
 import (
 	"fmt"
-	"github.com/guonaihong/gurl/gurlib"
+	"github.com/guonaihong/gurl/core"
 	"os"
 )
 
-func Main(fileName string, fields string, renameKey string, message gurlib.Message) {
+func Main(fileName string, fields string, renameKey string, message core.Message) {
 	out, err := ReadFile(fileName, fields, renameKey)
 	if err != nil {
 		fmt.Printf("%s\n", err)

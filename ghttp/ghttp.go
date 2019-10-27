@@ -1,14 +1,15 @@
-package gurl
+package ghttp
 
 import (
 	"encoding/json"
 	"fmt"
 	"github.com/guonaihong/flag"
-	"github.com/guonaihong/gurl/gurlib"
-	url2 "github.com/guonaihong/gurl/gurlib/url"
+	"github.com/guonaihong/gurl/core"
+	url2 "github.com/guonaihong/gurl/ghttp/url"
 	"github.com/guonaihong/gurl/input"
 	"github.com/guonaihong/gurl/output"
 	"github.com/guonaihong/gurl/task"
+	"github.com/guonaihong/gurl/utils"
 	"io"
 	_ "io/ioutil"
 	"net"
@@ -30,12 +31,12 @@ type GurlCmd struct {
 	bench       bool
 	writeStream bool
 	merge       bool
-	report      *gurlib.Report
-	*gurlib.Gurl
+	report      *Report
+	*Gurl
 	debug bool
 }
 
-func parse(val map[string]string, g *gurlib.Gurl, inJson string) {
+func parse(val map[string]string, g *Gurl, inJson string) {
 
 	err := json.Unmarshal([]byte(inJson), &val)
 	if err != nil {
@@ -83,9 +84,9 @@ func (cmd *GurlCmd) Init() {
 		cmd.Gurl.ParseInit()
 	}
 	if cmd.bench {
-		cmd.report = gurlib.NewReport(cmd.C, cmd.N, cmd.Gurl.Url) // todo
+		cmd.report = NewReport(cmd.C, cmd.N, cmd.Gurl.Url) // todo
 		if len(cmd.Duration) > 0 {
-			if t := gurlib.ParseTime(cmd.Duration); int(t) > 0 {
+			if t := utils.ParseTime(cmd.Duration); int(t) > 0 {
 				cmd.report.SetDuration(t) // todo
 			}
 		}
@@ -102,7 +103,7 @@ func (cmd *GurlCmd) WaitAll() {
 }
 
 //todo
-func (cmd *GurlCmd) streamWriteJson(rsp *gurlib.Response, err error, inJson map[string]string) {
+func (cmd *GurlCmd) streamWriteJson(rsp *Response, err error, inJson map[string]string) {
 	m := map[string]interface{}{}
 	m["err"] = ""
 	m["status_code"] = fmt.Sprintf("%d", rsp.StatusCode)
@@ -119,14 +120,14 @@ func (cmd *GurlCmd) streamWriteJson(rsp *gurlib.Response, err error, inJson map[
 
 func (cmd *GurlCmd) SubProcess(work chan string) {
 	g := *cmd.Gurl //这里是copy不是操作指针
-	g0 := gurlib.Gurl{Client: g.Client}
-	g0.GurlCore = *gurlib.CopyAndNew(&g.GurlCore)
+	g0 := Gurl{Client: g.Client}
+	g0.GurlCore = *CopyAndNew(&g.GurlCore)
 	var inJson map[string]string
 
 	for v := range work {
 		if len(v) > 0 && v[0] == '{' {
 			inJson = map[string]string{}
-			g.GurlCore = *gurlib.CopyAndNew(&g.GurlCore)
+			g.GurlCore = *CopyAndNew(&g.GurlCore)
 
 			g.FormCache = nil
 			g.NotParseAt = nil
@@ -211,7 +212,7 @@ func toFlag(output, str string) (flag int) {
 		case "append":
 			flag |= os.O_APPEND
 		case "line":
-			flag |= gurlib.ADD_LINE
+			flag |= ADD_LINE
 		case "trunc":
 			flag |= os.O_TRUNC
 		}
@@ -220,7 +221,7 @@ func toFlag(output, str string) (flag int) {
 	return flag
 }
 
-func Main(message gurlib.Message, argv0 string, argv []string) {
+func Main(message core.Message, argv0 string, argv []string) {
 	command := flag.NewFlagSet(argv0, flag.ExitOnError)
 
 	headers := command.StringSlice("H, header", []string{}, "Pass custom header LINE to server (H)")
@@ -330,12 +331,12 @@ func Main(message gurlib.Message, argv0 string, argv []string) {
 			MaxIdleConnsPerHost: *conns,
 			//Dial:                dialer.Dial,
 		},
-		Timeout: gurlib.ParseTime(*connectTimeout),
+		Timeout: utils.ParseTime(*connectTimeout),
 	}
 
-	g := gurlib.Gurl{
+	g := Gurl{
 		Client: &client,
-		GurlCore: gurlib.GurlCore{
+		GurlCore: GurlCore{
 			Method: *method,
 			F:      *forms,
 			H:      *headers,

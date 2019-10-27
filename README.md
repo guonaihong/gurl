@@ -7,7 +7,7 @@
 gurl 是http, websocket bench工具和curl的继承者
 
 #### 功能
-* 多协议支持http, websocket, tcp, udp
+* 多协议支持http, websocket
 * 支持curl常用命令行选项
 * 支持压测模式，可以根据并发数和线程数，也可以根据持续时间，也可以指定每秒并发数压测http, websocket, tcp服务
 * url 支持简写
@@ -363,8 +363,6 @@ gurl http -I -R url.list -skey "url=rf.col.0" "|" -ac 5 -r -w -merge "{url}" -o 
 #### TODO
 * 集群模式
 * GUI
-* tcp,udp 模块改造
-* tcp,udp 
 
 #### websocket 子命令
 

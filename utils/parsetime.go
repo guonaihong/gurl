@@ -1,4 +1,4 @@
-package gurlib
+package utils
 
 import (
 	"time"
