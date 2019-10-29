@@ -30,11 +30,11 @@ const ADD_LINE = 1 << 62
 type GurlCore struct {
 	Method string `json:"method,omitempty"`
 
-	J   []string `json:"J,omitempty"`
-	F   []string `json:"F,omitempty"`
-	H   []string `json:"H,omitempty"` // http header
-	Url string   `json:"url,omitempty"`
-	O   string   `json:"o,omitempty"`
+	Json     []string `json:"Json,omitempty"`
+	FormData []string `json:"FormData,omitempty"`
+	Header   []string `json:"Header,omitempty"` // http header
+	Url      string   `json:"url,omitempty"`
+	Output   string   `json:"o,omitempty"`
 
 	Jfa []string `json:"Jfa,omitempty"`
 
@@ -42,8 +42,8 @@ type GurlCore struct {
 
 	Body       []byte `json:"body,omitempty"`
 	Flag       int
-	V          bool `json:"-"`
-	A          string
+	Verbose    bool `json:"-"`
+	UserAgent  string
 	Color      bool
 	Query      []string
 	NotParseAt map[string]struct{}
@@ -52,22 +52,22 @@ type GurlCore struct {
 func CopyAndNew(g *GurlCore) *GurlCore {
 	return &GurlCore{
 		Method:    g.Method,
-		J:         append([]string{}, g.J...),
-		F:         append([]string{}, g.F...),
-		H:         append([]string{}, g.H...),
+		Json:      append([]string{}, g.Json...),
+		FormData:  append([]string{}, g.FormData...),
+		Header:    append([]string{}, g.Header...),
 		Url:       g.Url,
-		O:         g.O,
+		Output:    g.Output,
 		Jfa:       append([]string{}, g.Jfa...),
 		FormCache: append([]FormVal{}, g.FormCache...),
 		Body:      append([]byte{}, g.Body...),
 		Flag:      g.Flag,
-		V:         g.V,
-		A:         g.A,
+		Verbose:   g.Verbose,
+		UserAgent: g.UserAgent,
 	}
 }
 
-func (g *GurlCore) AddFormStr(F []string) {
-	if len(F) == 0 {
+func (g *GurlCore) AddFormStr(FormData []string) {
+	if len(FormData) == 0 {
 		return
 	}
 
@@ -75,12 +75,12 @@ func (g *GurlCore) AddFormStr(F []string) {
 		g.NotParseAt = make(map[string]struct{}, 10)
 	}
 
-	oldLen := len(g.F)
-	for i := 0; i < len(F); i++ {
-		g.NotParseAt["F"+fmt.Sprintf("%d", oldLen+i)] = struct{}{}
+	oldLen := len(g.FormData)
+	for i := 0; i < len(FormData); i++ {
+		g.NotParseAt["FormData"+fmt.Sprintf("%d", oldLen+i)] = struct{}{}
 	}
 
-	g.F = append(g.F, F...)
+	g.FormData = append(g.FormData, FormData...)
 }
 
 func (g *GurlCore) AddJsonFormStr(Jfa []string) {
@@ -100,7 +100,7 @@ func (g *GurlCore) AddJsonFormStr(Jfa []string) {
 }
 
 func (g *GurlCore) formNotParseAt(idx int) bool {
-	_, ok := g.NotParseAt[fmt.Sprintf("F%d", idx)]
+	_, ok := g.NotParseAt[fmt.Sprintf("FormData%d", idx)]
 	return ok
 }
 
@@ -140,8 +140,8 @@ func parseVal2(bodyJson map[string]interface{}, key, val string, notParseAt bool
 	bodyJson[key] = parseAt(val, notParseAt)
 }
 
-func toJson(J []string, notParseAts []bool, bodyJson map[string]interface{}) {
-	for j, v := range J {
+func toJson(Json []string, notParseAts []bool, bodyJson map[string]interface{}) {
+	for j, v := range Json {
 		pos := strings.Index(v, ":")
 		if pos == -1 {
 			bodyJson[v] = ""
@@ -207,12 +207,12 @@ func toJson(J []string, notParseAts []bool, bodyJson map[string]interface{}) {
 	}
 }
 
-func (g *GurlCore) form(F []string, fm *[]FormVal) {
+func (g *GurlCore) form(FormData []string, fm *[]FormVal) {
 
 	fileds := [2]string{}
 	formVals := []FormVal{}
 
-	for k, v := range F {
+	for k, v := range FormData {
 
 		fileds[0], fileds[1] = "", ""
 
@@ -243,7 +243,7 @@ func (g *GurlCore) form(F []string, fm *[]FormVal) {
 			formVals = append(formVals, FormVal{Tag: fileds[0], Body: []byte(fileds[1])})
 		}
 
-		//F[i] = fileds[0]
+		//FormData[i] = fileds[0]
 	}
 
 	*fm = append(*fm, formVals...)
@@ -331,10 +331,10 @@ func (g *GurlCore) ParseInit() {
 		ParseBody(&g.Body)
 	}
 
-	if len(g.J) > 0 {
+	if len(g.Json) > 0 {
 		bodyJson := map[string]interface{}{}
 
-		toJson(g.J, nil, bodyJson)
+		toJson(g.Json, nil, bodyJson)
 
 		body, err := json.Marshal(&bodyJson)
 		if err != nil {
@@ -351,8 +351,8 @@ func (g *GurlCore) ParseInit() {
 		g.jsonFromAppend(g.Jfa, &g.FormCache)
 	}
 
-	if len(g.F) > 0 {
-		g.form(g.F, &g.FormCache)
+	if len(g.FormData) > 0 {
+		g.form(g.FormData, &g.FormCache)
 	}
 }
 
@@ -441,7 +441,7 @@ func (g *GurlCore) addQueryString() string {
 
 func (g *GurlCore) HeadersAdd(req *http.Request) {
 
-	for _, v := range g.H {
+	for _, v := range g.Header {
 
 		headers := strings.Split(v, ":")
 
@@ -455,8 +455,8 @@ func (g *GurlCore) HeadersAdd(req *http.Request) {
 		req.Header.Add(headers[0], headers[1])
 	}
 
-	if len(g.A) > 0 {
-		req.Header.Set("User-Agent", g.A)
+	if len(g.UserAgent) > 0 {
+		req.Header.Set("User-Agent", g.UserAgent)
 	}
 	req.Header.Set("Accept", "*/*")
 	req.Header.Set("Host", req.URL.Host)
@@ -465,7 +465,7 @@ func (g *GurlCore) HeadersAdd(req *http.Request) {
 
 func (g *GurlCore) writeHead(rsp *Response, w io.Writer) {
 
-	if !g.V {
+	if !g.Verbose {
 		return
 	}
 
@@ -526,13 +526,13 @@ func (g *GurlCore) writeBytes(rsp *Response) (err error) {
 	all := rsp.Body
 	var fd *os.File
 
-	switch g.O {
+	switch g.Output {
 	case "stdout":
 		fd = os.Stdout
 	case "stderr":
 		fd = os.Stderr
 	default:
-		fd, err = os.OpenFile(g.O, g.Flag, 0644)
+		fd, err = os.OpenFile(g.Output, g.Flag, 0644)
 		if err != nil {
 			return
 		}
@@ -588,7 +588,7 @@ func (g *Gurl) Send() (*Response, error) {
 
 func (g *GurlCore) send(client *http.Client) (*Response, error) {
 	rsp, err := g.sendExec(client)
-	if rsp.Err == "" && len(g.O) > 0 {
+	if rsp.Err == "" && len(g.Output) > 0 {
 		g.writeBytes(rsp)
 	}
 	return rsp, err
@@ -686,18 +686,4 @@ func (g *GurlCore) sendExec(client *http.Client) (*Response, error) {
 
 	// 创建http.NewRequest地方有两个，todo归一化
 	return g.GetOrBodyExec(client)
-}
-
-func ParseMF(mf string, formCache *[]FormVal) {
-	pos := strings.Index(mf, "=")
-	if pos == -1 {
-		return
-	}
-
-	fv := FormVal{}
-
-	fv.Tag = mf[:pos]
-	fv.Body = []byte(mf[pos+1:])
-	fv.Fname = "test"
-	*formCache = append(*formCache, fv)
 }
