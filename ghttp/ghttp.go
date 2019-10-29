@@ -55,27 +55,27 @@ func parse(val map[string]string, g *Gurl, inJson string) {
 	}
 
 	r := strings.NewReplacer(rs...)
-	for k, v := range g.J {
-		g.J[k] = r.Replace(v)
+	for k, v := range g.Json {
+		g.Json[k] = r.Replace(v)
 	}
 
-	for k, v := range g.F {
-		g.F[k] = r.Replace(v)
+	for k, v := range g.FormData {
+		g.FormData[k] = r.Replace(v)
 	}
 
-	for k, v := range g.H {
-		g.H[k] = r.Replace(v)
+	for k, v := range g.Header {
+		g.Header[k] = r.Replace(v)
 	}
 
 	for k, v := range g.Jfa {
 		g.Jfa[k] = r.Replace(v)
 	}
 
-	if len(g.A) > 0 {
-		g.A = r.Replace(g.A)
+	if len(g.UserAgent) > 0 {
+		g.UserAgent = r.Replace(g.UserAgent)
 	}
 	g.Url = r.Replace(g.Url)
-	g.O = r.Replace(g.O)
+	g.Output = r.Replace(g.Output)
 	g.Body = []byte(r.Replace(string(g.Body)))
 }
 
@@ -337,19 +337,19 @@ func Main(message core.Message, argv0 string, argv []string) {
 	g := Gurl{
 		Client: &client,
 		GurlCore: GurlCore{
-			Method: *method,
-			F:      *forms,
-			H:      *headers,
-			O:      *outputFileName,
-			J:      *toJson,
-			Jfa:    *jfa,
-			Url:    Url,
-			Flag:   toFlag(*outputFileName, *oflag),
-			Body:   []byte(*data),
-			V:      *verbose,
-			A:      *userAgent,
-			Color:  *color,
-			Query:  *query,
+			Method:    *method,
+			FormData:  *forms,
+			Header:    *headers,
+			Output:    *outputFileName,
+			Json:      *toJson,
+			Jfa:       *jfa,
+			Url:       Url,
+			Flag:      toFlag(*outputFileName, *oflag),
+			Body:      []byte(*data),
+			Verbose:   *verbose,
+			UserAgent: *userAgent,
+			Color:     *color,
+			Query:     *query,
 		},
 	}
 
@@ -377,7 +377,7 @@ func Main(message core.Message, argv0 string, argv []string) {
 	cmd.Producer()
 
 	if *bench {
-		g.O = ""
+		g.Output = ""
 	}
 
 	cmd.Task.Processer = &cmd
