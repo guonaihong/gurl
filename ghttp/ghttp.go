@@ -2,6 +2,7 @@ package ghttp
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/guonaihong/flag"
 	"github.com/guonaihong/gurl/core"
@@ -12,9 +13,7 @@ import (
 	"github.com/guonaihong/gurl/utils"
 	"io"
 	_ "io/ioutil"
-	"net"
 	"net/http"
-	"net/url"
 	"os"
 	"runtime"
 	"strings"
@@ -172,15 +171,9 @@ func CmdErr(err error) {
 		return
 	}
 
-	if uerr, ok := err.(*url.Error); ok {
-		if noerr, ok := uerr.Err.(*net.OpError); ok {
-			if scerr, ok := noerr.Err.(*os.SyscallError); ok {
-				if scerr.Err == syscall.ECONNREFUSED {
-					fmt.Printf("gurl: (7) couldn't connect to host\n")
-					os.Exit(7)
-				}
-			}
-		}
+	if errors.Is(err, syscall.ECONNREFUSED) {
+		fmt.Printf("gurl: (7) couldn't connect to host\n")
+		return
 	}
 
 	fmt.Printf("%s\n", err)
