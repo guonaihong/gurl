@@ -25,7 +25,7 @@ type FormVal struct {
 	Body  []byte
 }
 
-const ADD_LINE = 1 << 62
+const ADD_LINE = 1 << 30
 
 type GurlCore struct {
 	Method string `json:"method,omitempty"`
